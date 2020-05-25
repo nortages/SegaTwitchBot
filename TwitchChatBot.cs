@@ -110,6 +110,7 @@ namespace SegaTwitchBot
         private void Client_OnJoinedChannel(object sender, OnJoinedChannelArgs e)
         {
             Console.WriteLine("Hey guys! I am a bot connected via TwitchLib!");
+            client.SendMessage(joinedChannel, "Hey guys! I am a bot connected via TwitchLib!");
         }
 
         private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
