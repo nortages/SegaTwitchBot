@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-//using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 
 namespace SegaTwitchBot
@@ -33,6 +32,7 @@ namespace SegaTwitchBot
             //    ClientID = items["ClientID"];
             //    RefreshToken = items["RefreshToken"];
             //    JsonBinSecret = items["JsonBinSecret"];
+            //    GoogleApiKey = items["GoogleApiKey"];
             //}
             //else
             //{
@@ -42,6 +42,7 @@ namespace SegaTwitchBot
             //    ClientID = Environment.GetEnvironmentVariable("ClientID");
             //    RefreshToken = Environment.GetEnvironmentVariable("RefreshToken");
             //    JsonBinSecret = Environment.GetEnvironmentVariable("JsonBinSecret");
+            //    GoogleApiKey = Environment.GetEnvironmentVariable("GoogleApiKey");
             //}
             ChannelName = Environment.GetEnvironmentVariable("ChannelName");
             BotUsername = Environment.GetEnvironmentVariable("BotUsername");
@@ -49,6 +50,7 @@ namespace SegaTwitchBot
             ClientID = Environment.GetEnvironmentVariable("ClientID");
             RefreshToken = Environment.GetEnvironmentVariable("RefreshToken");
             JsonBinSecret = Environment.GetEnvironmentVariable("JsonBinSecret");
+            GoogleApiKey = Environment.GetEnvironmentVariable("GoogleApiKey");
         }
 
         public static string ChannelName { get; private set; }
@@ -57,5 +59,6 @@ namespace SegaTwitchBot
         public static string ClientID { get; private set; }
         public static string RefreshToken { get; private set; }
         public static string JsonBinSecret { get; private set; }
+        public static string GoogleApiKey { get; private set; }
     }
 }
