@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 namespace SegaTwitchBot
 {
@@ -8,8 +9,8 @@ namespace SegaTwitchBot
         {
             TwitchChatBot bot = new TwitchChatBot();
             bot.Connect();
-            
-            Console.ReadLine();
+
+            Thread.Sleep(-1);
         }        
     }    
 }
