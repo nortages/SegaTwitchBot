@@ -1,1 +1,1 @@
-worker cd $HOME/heroku_output && ./SegaTwitchBot
+worker ./SegaTwitchBot
