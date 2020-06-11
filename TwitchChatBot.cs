@@ -24,6 +24,7 @@ using Newtonsoft.Json;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
+using TwitchLib.Api.Core.Enums;
 
 namespace SegaTwitchBot
 {
@@ -136,7 +137,6 @@ namespace SegaTwitchBot
                 Console.WriteLine($"Successfully verified listening to topic: {e.Topic}");
             else
                 Console.WriteLine($"Failed to listen! Error: {e.Response.Error}");
-            client.SendWhisper("segatron99k", "loh");
         }
 
         private void Client_OnConnectionError(object sender, OnConnectionErrorArgs e)
