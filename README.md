@@ -10,9 +10,10 @@ This is a twitch bot - **NortagesBot**. He is runnig on the K_i_ra channel. He h
 - !залславы фулл - sends a link to all winners of the month.
   
 # Getting Started
-Firstly, you need to create an account for your future bot if you want to set him its own name. Then you should go [here](https://twitchtokengenerator.com/), specify scopes you need and get the access token, refresh token, and client id. My bot stores information about the quiz in Google Sheets, so you need create a new project [here](https://console.developers.google.com/). Then you need to create a Services Account and get its credentials; more details (here)[https://medium.com/@williamchislett/writing-to-google-sheets-api-using-net-and-a-services-account-91ee7e4a291]. Also JSONbin API to store another information about the quiz, so you also need to provide JsonBinSecret. All these credentials you have to store in the config.json at the root of the project if you start the bot locally or in the Config Vars if it has been deployed to Heroku. So that your bot can give timeouts, you're gonna need moderator rights on the channel where the bot will be.
+Firstly, you need to create an account for your future bot if you want to set him its own name. Then you should go [here](https://twitchtokengenerator.com/), specify scopes you need and get the access token, refresh token, and client id. My bot stores information about the quiz in Google Sheets, so you need create a new project [here](https://console.developers.google.com/). Then you need to create a Services Account and get its credentials; more details [here](https://medium.com/@williamchislett/writing-to-google-sheets-api-using-net-and-a-services-account-91ee7e4a291). Also JSONbin API to store another information about the quiz, so you also need to provide JsonBinSecret. All these credentials you have to store in the config.json at the root of the project if you start the bot locally or in the Config Vars if it has been deployed to Heroku. So that your bot can give timeouts, you're gonna need moderator rights on the channel where the bot will be.
 <details>
 <summary>Example of config.json</summary>
+  
 ```json
 {
     "BotToken": "YourBotToken",
@@ -24,6 +25,7 @@ Firstly, you need to create an account for your future bot if you want to set hi
     "credentials.json": {}
 }
 ```
+
 </details>
 
 ## Notes
