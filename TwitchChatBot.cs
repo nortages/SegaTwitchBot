@@ -103,7 +103,7 @@ namespace SegaTwitchBot
                     "user",
                     CancellationToken.None,
                     new FileDataStore(credPath, true),
-                    new PromptCodeReceiver()).Result;
+                    new LocalServerCodeReceiver()).Result;
                 Console.WriteLine("Credential file saved to: " + credPath);
             }
 
