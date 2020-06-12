@@ -102,7 +102,8 @@ namespace SegaTwitchBot
                     Scopes,
                     "user",
                     CancellationToken.None,
-                    new FileDataStore(credPath, true)).Result;
+                    new FileDataStore(credPath, true),
+                    new PromptCodeReceiver()).Result;
                 Console.WriteLine("Credential file saved to: " + credPath);
             }
 
