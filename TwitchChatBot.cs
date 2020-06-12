@@ -39,7 +39,7 @@ namespace SegaTwitchBot
         static SheetsService service;
         // If modifying these scopes, delete your previously saved credentials
         // at ~/.credentials/sheets.googleapis.com-dotnet-quickstart.json
-        static readonly string[] Scopes = { SheetsService.Scope.Spreadsheets };
+        static readonly string[] scopes = { SheetsService.Scope.Spreadsheets };
         const string linkToHOF = "https://docs.google.com/spreadsheets/d/19RwGl1i79-3ZuVYyytfyvsg_wVprvozMSyooAy3HaU8";
         const string spreadsheetId = "19RwGl1i79-3ZuVYyytfyvsg_wVprvozMSyooAy3HaU8";
 
@@ -89,27 +89,21 @@ namespace SegaTwitchBot
 
             pubsub.Connect();
 
-            UserCredential credential;
-
-            using (var stream =
-                new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+            GoogleCredential credential;
+            if (File.Exists("credentials.json"))
             {
-                // The file token.json stores the user's access and refresh tokens, and is created
-                // automatically when the authorization flow completes for the first time.
-                string credPath = "token.json";
-                credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
-                    GoogleClientSecrets.Load(stream).Secrets,
-                    Scopes,
-                    "user",
-                    CancellationToken.None,
-                    new FileDataStore(credPath, true),
-                    new LocalServerCodeReceiver()).Result;
-                Console.WriteLine("Credential file saved to: " + credPath);
+                // Put your credentials json file in the root of the solution and make sure copy to output dir property is set to always copy 
+                using var stream = new FileStream("credentials.json", FileMode.Open, FileAccess.Read);
+                credential = GoogleCredential.FromStream(stream).CreateScoped(scopes);
             }
+            else
+            {
+                credential = GoogleCredential.FromJson(Environment.GetEnvironmentVariable("credentials.json")).CreateScoped(scopes);
+            }            
 
             // Create Google Sheets API service.
             service = new SheetsService(new BaseClientService.Initializer()
-            {
+            {                
                 HttpClientInitializer = credential,
                 ApplicationName = ApplicationName,
             });
