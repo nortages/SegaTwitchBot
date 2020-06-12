@@ -21,8 +21,7 @@ Firstly, you need to create an account for your future bot if you want to set hi
     "RefreshToken": "YourBotRefreshToken",
     "ChannelName": "ChannelWhereBotWillBe",
     "ClientID": "YourBotClientID",
-    "JsonBinSecret": "YourJsonBinSecret",
-    "credentials.json": {}
+    "JsonBinSecret": "YourJsonBinSecret"
 }
 ```
 
