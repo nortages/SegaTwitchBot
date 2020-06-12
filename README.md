@@ -17,4 +17,4 @@ Firstly, you need to create an account for your future bot if you want to set hi
 - If you have any questions about TwitchLib or Twitch API you may ask them in [their Discord channel](https://discord.gg/8NXaEyV).
   
 # Deployment on Heroku
-To deploy this bot on Heroku firstly it is necessary to add a custom buildpack for dotnet apps. I used [this one](https://github.com/jincod/dotnetcore-buildpack.git). To rewrite the default commands that's added by the buildpack you need to create your own Procfile (use *worker* instead of *web*). If it adds its command to yours, then try [this](https://github.com/jincod/dotnetcore-buildpack/issues/111#issuecomment-643242377).
+To deploy this bot on Heroku, firstly, it is necessary to add a custom buildpack for dotnet apps. I used [this one](https://github.com/jincod/dotnetcore-buildpack.git). To rewrite the default commands that's added by the buildpack you need to create your own Procfile (use *worker* instead of *web*). If it adds its command to yours, then try [this](https://github.com/jincod/dotnetcore-buildpack/issues/111#issuecomment-643242377).
