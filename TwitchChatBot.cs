@@ -24,6 +24,11 @@ using Google.Apis.Auth.OAuth2;
 using System.IO;
 using System.Threading;
 using Google.Apis.Util.Store;
+using TwitchLib.Api.Core.Models.Undocumented.CSStreams;
+using TwitchLib.Communication.Events;
+using VkNet;
+using VkNet.Model;
+using VkNet.Enums.Filters;
 
 namespace SegaTwitchBot
 {
@@ -71,11 +76,12 @@ namespace SegaTwitchBot
             client.Initialize(credentials, TwitchInfo.ChannelName);
 
             //client.OnLog += Client_OnLog;
-            client.OnChatCommandReceived += OnChatCommandReceived;
+            client.OnChatCommandReceived += Client_OnChatCommandReceived;
             client.OnConnectionError += Client_OnConnectionError;
             client.OnJoinedChannel += Client_OnJoinedChannel;
-            client.OnMessageReceived += Client_OnMessageReceivedAsync;
+            client.OnMessageReceived += Client_OnMessageReceived;
             client.OnConnected += Client_OnConnected;
+            client.OnError += Client_OnError;
 
             client.Connect();
 
@@ -107,9 +113,27 @@ namespace SegaTwitchBot
                 HttpClientInitializer = credential,
                 ApplicationName = ApplicationName,
             });
+
+            var api = new VkApi();
+
+            api.Authorize(new ApiAuthParams
+            {
+                AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
+            });
+
+            var group = api.Groups.GetById(null, "120235040", GroupsFields.Status).FirstOrDefault();
+
+            Console.WriteLine(group?.Status);
         }
 
-        private async void OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
+        // TWITCH CLIENT SUBSCRIBERS
+
+        private void Client_OnError(object sender, OnErrorEventArgs e)
+        {
+            Console.WriteLine($"ERROR: {e.Exception.Message}\n{e.Exception.StackTrace}");
+        }
+
+        private async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
         {
             if (timeToPolling && e.Command.CommandText == "ммр")
             {
@@ -195,6 +219,64 @@ namespace SegaTwitchBot
                     }
                 }
             }
+            else if (e.Command.CommandText == "песня")
+            {
+                var api = new VkApi();
+
+                api.Authorize(new ApiAuthParams
+                {
+                    AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
+                });
+                Console.WriteLine(api.Token);
+
+                var group = api.Groups.GetById(null, "120235040", GroupsFields.Status);
+
+                Console.WriteLine(group[0].Status);
+            }
+
+
+        }
+
+        private void Client_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
+        {
+            Console.WriteLine($"{e.DateTime}: {e.BotUsername} - {e.Data}");
+            // TODO: Once in a while save logs to a file
+        }
+
+        private void Client_OnConnected(object sender, OnConnectedArgs e)
+        {
+            Console.WriteLine($"Connected to {e.AutoJoinChannel}");
+        }
+
+        private void Client_OnJoinedChannel(object sender, OnJoinedChannelArgs e)
+        {
+            Console.WriteLine("Hey guys! I am a bot connected via TwitchLib!");
+        }
+
+        private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
+        {
+            if (toTimeoutUserBelow && !e.ChatMessage.IsModerator && !e.ChatMessage.IsBroadcaster)
+            {
+                if (usersWithShield.Contains(e.ChatMessage.DisplayName))
+                {
+                    Console.WriteLine($"{e.ChatMessage.DisplayName} lose a shield!");
+                    client.SendMessage(joinedChannel, $"@{e.ChatMessage.DisplayName}, Твой бабл лопнул CurseLit Теперь будь осторожнее Keepo");
+                    usersWithShield.Remove(e.ChatMessage.DisplayName);
+                    return;
+                }
+                client.TimeoutUser(joinedChannel, e.ChatMessage.DisplayName, TimeSpan.FromMinutes(TIMEOUTTIME));
+                if (e.ChatMessage.DisplayName.ToLower() == "segatron99k")
+                {
+                    client.SendMessage(joinedChannel, "Прости, создатель PepeHands");
+                }
+                toTimeoutUserBelow = false;
+                Console.WriteLine($"{e.ChatMessage.DisplayName} is banned on {TIMEOUTTIME} minutes!");
+                return;
+            }
+            if (regex_botsPlusToChat.Matches(e.ChatMessage.Message).Count > 0)
+            {
+                client.SendMessage(joinedChannel, "+");
+            }
         }
 
         // PUBSUB SUBSCRIBERS
@@ -242,50 +324,6 @@ namespace SegaTwitchBot
         private void Client_OnConnectionError(object sender, OnConnectionErrorArgs e)
         {
             Console.WriteLine(e.Error);
-        }
-
-        // TWITCH CLIENT SUBSCRIBERS
-
-        private void Client_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
-        {
-            Console.WriteLine($"{e.DateTime}: {e.BotUsername} - {e.Data}");
-            // TODO: Once in a while save logs to a file
-        }
-
-        private void Client_OnConnected(object sender, OnConnectedArgs e)
-        {
-            Console.WriteLine($"Connected to {e.AutoJoinChannel}");
-        }
-
-        private void Client_OnJoinedChannel(object sender, OnJoinedChannelArgs e)
-        {
-            Console.WriteLine("Hey guys! I am a bot connected via TwitchLib!");
-        }
-
-        private void Client_OnMessageReceivedAsync(object sender, OnMessageReceivedArgs e)
-        {
-            if (toTimeoutUserBelow && !e.ChatMessage.IsModerator && !e.ChatMessage.IsBroadcaster)
-            {
-                if (usersWithShield.Contains(e.ChatMessage.DisplayName))
-                {
-                    Console.WriteLine($"{e.ChatMessage.DisplayName} lose a shield!");
-                    client.SendMessage(joinedChannel, $"@{e.ChatMessage.DisplayName}, Твой бабл лопнул CurseLit Теперь будь осторожнее Keepo");
-                    usersWithShield.Remove(e.ChatMessage.DisplayName);
-                    return;
-                }
-                client.TimeoutUser(joinedChannel, e.ChatMessage.DisplayName, TimeSpan.FromMinutes(TIMEOUTTIME));
-                if (e.ChatMessage.DisplayName.ToLower() == "segatron99k")
-                {
-                    client.SendMessage(joinedChannel, "Прости, создатель PepeHands");
-                }
-                toTimeoutUserBelow = false;
-                Console.WriteLine($"{e.ChatMessage.DisplayName} is banned on {TIMEOUTTIME} minutes!");
-                return;
-            }
-            if (regex_botsPlusToChat.Matches(e.ChatMessage.Message).Count > 0)
-            {
-                client.SendMessage(joinedChannel, "+");
-            }
         }
 
         Dictionary<string, int> GetHallOfFame()

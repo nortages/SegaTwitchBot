@@ -10,6 +10,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="System.Collections.Specialized" Version="4.3.0" />
     <PackageReference Include="TwitchLib" Version="3.1.1" />
+    <PackageReference Include="VkNet" Version="1.53.0" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Config.Designer.cs">

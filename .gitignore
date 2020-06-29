@@ -658,3 +658,4 @@ MigrationBackup/
 # End of https://www.gitignore.io/api/csharp,dotnetcore,aspnetcore,visualstudio,visualstudiocode
 old_config.json
 credentials.json
+.env
