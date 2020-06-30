@@ -47,13 +47,13 @@ namespace SegaTwitchBot
         const int TIMEOUTTIME = 10;
         static bool timeToPolling = false;
         static bool toTimeoutUserBelow = false;
-        static Dictionary<string, int> votes;
+        static Dictionary<string, int> votes;   
         static readonly HashSet<string> usersWithShield = new HashSet<string>();
         static readonly Regex regex_botsPlusToChat = new Regex(@".*?[Бб]оты?,? \+ в ча[тй].*", RegexOptions.Compiled);
         static readonly Regex regex_hiToBot = new Regex($@".+?NortagesBot.+?([Пп]ривет|[Зз]дравствуй|[Дд]арова|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|[Qq]{1,2}).*", RegexOptions.Compiled);
 
         public void Connect()
-        {
+        {            
             HTTPClient.DefaultRequestHeaders.Add("secret-key", TwitchInfo.JsonBinSecret);
             HTTPClient.DefaultRequestHeaders.Add("versioning", "false");
 
@@ -117,7 +117,7 @@ namespace SegaTwitchBot
             vk_api.Authorize(new ApiAuthParams
             {
                 AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
-            });
+            });            
         }
 
         // TWITCH CLIENT SUBSCRIBERS
@@ -243,7 +243,7 @@ namespace SegaTwitchBot
             else if (e.Command.CommandText == "песня")
             {
                 var group = vk_api.Groups.GetByIdAsync(null, "120235040", GroupsFields.Status).Result.FirstOrDefault();
-                var result = group?.Status != "привет, омлет" ? group?.Status : "Сейчас у стримера в вк ничего не играет :(";
+                var result = group.StatusAudio != null ? $"{group.StatusAudio.Artist} - {group.StatusAudio.Title}" : "Сейчас у стримера в вк ничего не играет :(";
                 Console.WriteLine("Current song: " + result);
                 client.SendMessage(joinedChannel, result);
             }
