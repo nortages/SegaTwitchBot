@@ -82,6 +82,10 @@ namespace SegaTwitchBot
             client.OnMessageReceived += Client_OnMessageReceived;
             client.OnConnected += Client_OnConnected;
             client.OnError += Client_OnError;
+            client.OnNewSubscriber += Client_OnNewSubscriber;
+            client.OnReSubscriber += Client_OnReSubscriber;
+            client.OnGiftedSubscription += Client_OnGiftedSubscription;
+            client.OnCommunitySubscription += Client_OnCommunitySubscription;
 
             client.Connect();
 
@@ -113,20 +117,30 @@ namespace SegaTwitchBot
                 HttpClientInitializer = credential,
                 ApplicationName = ApplicationName,
             });
-
-            var api = new VkApi();
-
-            api.Authorize(new ApiAuthParams
-            {
-                AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
-            });
-
-            var group = api.Groups.GetById(null, "120235040", GroupsFields.Status).FirstOrDefault();
-
-            Console.WriteLine(group?.Status);
         }
 
         // TWITCH CLIENT SUBSCRIBERS
+
+        private void Client_OnCommunitySubscription(object sender, OnCommunitySubscriptionArgs e)
+        {
+            client.SendMessage(joinedChannel, $"{e.GiftedSubscription.DisplayName}, спасибо за подарочную подписку! peepoLove");
+        }
+
+        private void Client_OnGiftedSubscription(object sender, OnGiftedSubscriptionArgs e)
+        {
+            //client.SendMessage(joinedChannel, $"{e.GiftedSubscription.DisplayName}, спасибо за подарочную подписку! peepoLove");
+            Console.WriteLine($"{e.GiftedSubscription.DisplayName}, спасибо за подарочную подписку! peepoLove");
+        }
+
+        private void Client_OnReSubscriber(object sender, OnReSubscriberArgs e)
+        {
+            client.SendMessage(joinedChannel, $"{e.ReSubscriber.DisplayName}, спасибо за обновление подписки! Poooound");
+        }
+
+        private void Client_OnNewSubscriber(object sender, OnNewSubscriberArgs e)
+        {
+            client.SendMessage(joinedChannel, $"{e.Subscriber.DisplayName}, спасибо за подписку! bleedPurple Давайте сюда Ваш паспорт FBCatch");
+        }
 
         private void Client_OnError(object sender, OnErrorEventArgs e)
         {
@@ -227,14 +241,12 @@ namespace SegaTwitchBot
                 {
                     AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
                 });
-                Console.WriteLine(api.Token);
 
-                var group = api.Groups.GetById(null, "120235040", GroupsFields.Status);
-
-                Console.WriteLine(group[0].Status);
+                var group = api.Groups.GetByIdAsync(null, "120235040", GroupsFields.Status).Result.FirstOrDefault();
+                var result = group?.Status != "привет, омлет" ? group?.Status : "Сейчас у стримера в вк ничего не играет :(";
+                Console.WriteLine("Current song: " + result);
+                client.SendMessage(joinedChannel, result);
             }
-
-
         }
 
         private void Client_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
