@@ -49,8 +49,8 @@ namespace SegaTwitchBot
         static bool toTimeoutUserBelow = false;
         static Dictionary<string, int> votes;
         static readonly HashSet<string> usersWithShield = new HashSet<string>();
-        static readonly Regex regex_botsPlusToChat = new Regex(@"[\wА-Яа-я]*[Бб]оты?,? \+ в чат[\wА-Яа-я]*");
-        static readonly Regex regex_hiToBot = new Regex($@".*{TwitchInfo.BotUsername}(.*(kupaSubHype|kupaPrivet|basilaHi|KonCha|VoHiYo|PrideToucan|FutureMan|HeyGuys|[Пп]ривет.*|[Зз]дравствуй|[Дд]арова))+", RegexOptions.IgnoreCase);
+        static readonly Regex regex_botsPlusToChat = new Regex(@".*?[Бб]оты?,? \+ в ча[тй].*", RegexOptions.Compiled);
+        static readonly Regex regex_hiToBot = new Regex($@".+?NortagesBot.+?([Пп]ривет|[Зз]дравствуй|[Дд]арова|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|[Qq]{1,2}).*", RegexOptions.Compiled);
 
         public void Connect()
         {
