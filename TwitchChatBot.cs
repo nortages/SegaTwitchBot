@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Text;
 using System.Linq;
@@ -12,8 +13,9 @@ using TwitchLib.Client.Extensions;
 using TwitchLib.Client.Models;
 using TwitchLib.PubSub;
 using TwitchLib.PubSub.Events;
-using TwitchLib.Communication.Clients;
+using TwitchLib.Communication.Events;
 using TwitchLib.Communication.Models;
+using TwitchLib.Communication.Clients;
 
 using Newtonsoft.Json;
 
@@ -21,11 +23,7 @@ using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
 using Google.Apis.Auth.OAuth2;
-using System.IO;
-using System.Threading;
-using Google.Apis.Util.Store;
-using TwitchLib.Api.Core.Models.Undocumented.CSStreams;
-using TwitchLib.Communication.Events;
+
 using VkNet;
 using VkNet.Model;
 using VkNet.Enums.Filters;
@@ -35,34 +33,29 @@ namespace SegaTwitchBot
     class TwitchChatBot
     {
         static TwitchClient client;
-        static TwitchPubSub pubsub;
-        static JoinedChannel joinedChannel;
-        static VkApi vk_api;
-
-        private static readonly HttpClient HTTPClient = new HttpClient();
+        static readonly TwitchPubSub pubsub = new TwitchPubSub();
+        static readonly JoinedChannel joinedChannel = new JoinedChannel(TwitchInfo.ChannelName);
+        static readonly HttpClient HTTPClient = new HttpClient();
+        static readonly VkApi vk_api = new VkApi();
 
         static readonly string ApplicationName = "Google Sheets API .NET Quickstart";
-        static SheetsService service;
-        // If modifying these scopes, delete your previously saved credentials
-        // at ~/.credentials/sheets.googleapis.com-dotnet-quickstart.json
+        static SheetsService sheets_service;
         static readonly string[] scopes = { SheetsService.Scope.Spreadsheets };
         const string linkToHOF = "https://docs.google.com/spreadsheets/d/19RwGl1i79-3ZuVYyytfyvsg_wVprvozMSyooAy3HaU8";
         const string spreadsheetId = "19RwGl1i79-3ZuVYyytfyvsg_wVprvozMSyooAy3HaU8";
 
         const int TIMEOUTTIME = 10;
+        static bool timeToPolling = false;
         static bool toTimeoutUserBelow = false;
         static Dictionary<string, int> votes;
         static readonly HashSet<string> usersWithShield = new HashSet<string>();
         static readonly Regex regex_botsPlusToChat = new Regex(@"[\wА-Яа-я]*[Бб]оты?,? \+ в чат[\wА-Яа-я]*");
-        static bool timeToPolling = false;
+        static readonly Regex regex_hiToBot = new Regex($@".*{TwitchInfo.BotUsername}(.*(kupaSubHype|kupaPrivet|basilaHi|KonCha|VoHiYo|PrideToucan|FutureMan|HeyGuys|[Пп]ривет.*|[Зз]дравствуй|[Дд]арова))+", RegexOptions.IgnoreCase);
 
         public void Connect()
         {
             HTTPClient.DefaultRequestHeaders.Add("secret-key", TwitchInfo.JsonBinSecret);
             HTTPClient.DefaultRequestHeaders.Add("versioning", "false");
-
-            // JoinedChannel
-            joinedChannel = new JoinedChannel(TwitchInfo.ChannelName);
 
             // TwitchClient
             ConnectionCredentials credentials = new ConnectionCredentials(TwitchInfo.BotUsername, TwitchInfo.BotToken);
@@ -87,14 +80,14 @@ namespace SegaTwitchBot
             client.OnReSubscriber += Client_OnReSubscriber;
             client.OnGiftedSubscription += Client_OnGiftedSubscription;
             client.OnCommunitySubscription += Client_OnCommunitySubscription;
-
+            
             client.Connect();
 
             // PubSub
-            pubsub = new TwitchPubSub();
             pubsub.OnPubSubServiceConnected += OnPubSubServiceConnected;
             pubsub.OnListenResponse += OnListenResponse;
             pubsub.OnRewardRedeemed += OnRewardRedeemed;
+            pubsub.OnStreamUp += OnStreamUp;
 
             pubsub.ListenToRewards(TwitchHelpers.GetUserId(TwitchInfo.ChannelName));
 
@@ -113,15 +106,13 @@ namespace SegaTwitchBot
             }            
 
             // Create Google Sheets API service.
-            service = new SheetsService(new BaseClientService.Initializer()
+            sheets_service = new SheetsService(new BaseClientService.Initializer()
             {                
                 HttpClientInitializer = credential,
                 ApplicationName = ApplicationName,
             });
 
             // VK API
-
-            var vk_api = new VkApi();
 
             vk_api.Authorize(new ApiAuthParams
             {
@@ -133,7 +124,14 @@ namespace SegaTwitchBot
 
         private void Client_OnCommunitySubscription(object sender, OnCommunitySubscriptionArgs e)
         {
-            client.SendMessage(joinedChannel, $"{e.GiftedSubscription.DisplayName}, спасибо за подарочную подписку! peepoLove");
+            if (e.GiftedSubscription.MsgParamSenderCount == 1)
+            {
+                client.SendMessage(joinedChannel, $"{e.GiftedSubscription.DisplayName}, спасибо за подарочную подписку! PrideFlower");
+            }
+            else
+            {
+                client.SendMessage(joinedChannel, $"{e.GiftedSubscription.DisplayName}, спасибо за подарочные подписки! peepoLove peepoLove peepoLove");
+            }
         }
 
         private void Client_OnGiftedSubscription(object sender, OnGiftedSubscriptionArgs e)
@@ -291,9 +289,19 @@ namespace SegaTwitchBot
             {
                 client.SendMessage(joinedChannel, "+");
             }
+            else if (regex_hiToBot.Matches(e.ChatMessage.Message).Count > 0)
+            {
+                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} Приветствую MrDestructoid");
+            }
         }
 
         // PUBSUB SUBSCRIBERS
+
+        private void OnStreamUp(object sender, OnStreamUpArgs e)
+        {
+            client.SendMessage(joinedChannel, "Привет всем и хорошего стрима!");
+            Console.WriteLine("The stream just has started");
+        }
 
         private static void OnRewardRedeemed(object sender, OnRewardRedeemedArgs e)
         {
@@ -343,7 +351,7 @@ namespace SegaTwitchBot
         Dictionary<string, int> GetHallOfFame()
         {
             string rangeToRead = "HallOfFame!A2:B";
-            var request = service.Spreadsheets.Values.Get(spreadsheetId, rangeToRead);
+            var request = sheets_service.Spreadsheets.Values.Get(spreadsheetId, rangeToRead);
 
             ValueRange response = request.Execute();
             var values = response.Values;
@@ -385,7 +393,7 @@ namespace SegaTwitchBot
             }
 
             ValueRange body = new ValueRange { Values = upd_values };
-            var upd_request = service.Spreadsheets.Values.Update(body, spreadsheetId, rangeToWrite);
+            var upd_request = sheets_service.Spreadsheets.Values.Update(body, spreadsheetId, rangeToWrite);
             upd_request.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
             upd_request.Execute();
         }
