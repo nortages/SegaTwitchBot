@@ -37,6 +37,7 @@ namespace SegaTwitchBot
         static TwitchClient client;
         static TwitchPubSub pubsub;
         static JoinedChannel joinedChannel;
+        static VkApi vk_api;
 
         private static readonly HttpClient HTTPClient = new HttpClient();
 
@@ -116,6 +117,15 @@ namespace SegaTwitchBot
             {                
                 HttpClientInitializer = credential,
                 ApplicationName = ApplicationName,
+            });
+
+            // VK API
+
+            var vk_api = new VkApi();
+
+            vk_api.Authorize(new ApiAuthParams
+            {
+                AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
             });
         }
 
@@ -234,14 +244,7 @@ namespace SegaTwitchBot
             }
             else if (e.Command.CommandText == "песня")
             {
-                var api = new VkApi();
-
-                api.Authorize(new ApiAuthParams
-                {
-                    AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
-                });
-
-                var group = api.Groups.GetByIdAsync(null, "120235040", GroupsFields.Status).Result.FirstOrDefault();
+                var group = vk_api.Groups.GetByIdAsync(null, "120235040", GroupsFields.Status).Result.FirstOrDefault();
                 var result = group?.Status != "привет, омлет" ? group?.Status : "Сейчас у стримера в вк ничего не играет :(";
                 Console.WriteLine("Current song: " + result);
                 client.SendMessage(joinedChannel, result);
