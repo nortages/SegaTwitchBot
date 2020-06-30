@@ -128,8 +128,7 @@ namespace SegaTwitchBot
 
         private void Client_OnGiftedSubscription(object sender, OnGiftedSubscriptionArgs e)
         {
-            //client.SendMessage(joinedChannel, $"{e.GiftedSubscription.DisplayName}, спасибо за подарочную подписку! peepoLove");
-            Console.WriteLine($"{e.GiftedSubscription.DisplayName}, спасибо за подарочную подписку! peepoLove");
+            client.SendMessage(joinedChannel, $"{e.GiftedSubscription.DisplayName}, спасибо за подарочную подписку {e.GiftedSubscription.MsgParamRecipientDisplayName}! peepoLove");
         }
 
         private void Client_OnReSubscriber(object sender, OnReSubscriberArgs e)
