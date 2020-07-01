@@ -28,7 +28,6 @@ namespace SegaTwitchBot
 
             if (userId == null || string.IsNullOrEmpty(userId))
                 return null;
-
             return twitchAPI.V5.Streams.GetUptimeAsync(userId).Result;
         }
 
@@ -76,7 +75,7 @@ namespace SegaTwitchBot
 
             if (!string.IsNullOrEmpty(userId))
             {
-                Channel channel = twitchAPI.V5.Channels.GetChannelByIDAsync(GetUserId(userName)).Result;
+                Channel channel = twitchAPI.V5.Channels.GetChannelByIDAsync(userId).Result;
                 if (channel != null)
                     return channel;
             }

@@ -37,6 +37,7 @@ namespace SegaTwitchBot
         static readonly JoinedChannel joinedChannel = new JoinedChannel(TwitchInfo.ChannelName);
         static readonly HttpClient HTTPClient = new HttpClient();
         static readonly VkApi vk_api = new VkApi();
+        static readonly Random rand = new Random();
 
         static readonly string ApplicationName = "Google Sheets API .NET Quickstart";
         static SheetsService sheets_service;
@@ -44,6 +45,7 @@ namespace SegaTwitchBot
         const string linkToHOF = "https://docs.google.com/spreadsheets/d/19RwGl1i79-3ZuVYyytfyvsg_wVprvozMSyooAy3HaU8";
         const string spreadsheetId = "19RwGl1i79-3ZuVYyytfyvsg_wVprvozMSyooAy3HaU8";
 
+        int l33thall_ears = 0;
         const int TIMEOUTTIME = 10;
         static bool timeToPolling = false;
         static bool toTimeoutUserBelow = false;
@@ -117,7 +119,7 @@ namespace SegaTwitchBot
             vk_api.Authorize(new ApiAuthParams
             {
                 AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
-            });            
+            });
         }
 
         // TWITCH CLIENT SUBSCRIBERS
@@ -156,7 +158,7 @@ namespace SegaTwitchBot
 
         private async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
         {
-            if (timeToPolling && e.Command.CommandText == "ммр")
+            if (timeToPolling && (e.Command.CommandText == "ммр" || e.Command.CommandText == "mmr"))
             {
                 if (int.TryParse(e.Command.ArgumentsAsString, out int vote))
                 {
@@ -240,12 +242,22 @@ namespace SegaTwitchBot
                     }
                 }
             }
-            else if (e.Command.CommandText == "песня")
+            else if (e.Command.CommandText == "песня" || e.Command.CommandText == "song")
             {
                 var group = vk_api.Groups.GetByIdAsync(null, "120235040", GroupsFields.Status).Result.FirstOrDefault();
                 var result = group.StatusAudio != null ? $"{group.StatusAudio.Artist} - {group.StatusAudio.Title}" : "Сейчас у стримера в вк ничего не играет :(";
                 Console.WriteLine("Current song: " + result);
                 client.SendMessage(joinedChannel, result);
+            }
+            else if (e.Command.CommandText == "сдрлетал")
+            {
+                string[] smiles = new string[] { "peepoClap peepoClap peepoClap", "FeelsBirthdayMan FeelsBirthdayMan FeelsBirthdayMan", "peepoLove peepoLove peepoLove" };
+                client.SendMessage(joinedChannel, $"@l33thall, {e.Command.ChatMessage.DisplayName} позравляет тебя с днём рождения! {smiles[rand.Next(smiles.Length)]} P.s. Пиши !уши, чтобы потянуть Летала за уши Kappa");
+            }
+            else if (e.Command.CommandText == "уши")
+            {
+                l33thall_ears++;
+                client.SendMessage(joinedChannel, $"{e.Command.ChatMessage.DisplayName} тянет Летала за уши в {l33thall_ears}й раз!");
             }
         }
 
