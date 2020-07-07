@@ -46,7 +46,6 @@ namespace SegaTwitchBot
         const string spreadsheetId = "19RwGl1i79-3ZuVYyytfyvsg_wVprvozMSyooAy3HaU8";
 
         int massGifts = 0;
-        string massGefter = null;
         const int TIMEOUTTIME = 10;
         static bool timeToPolling = false;
         static bool toTimeoutUserBelow = false;
@@ -257,7 +256,7 @@ namespace SegaTwitchBot
                 //var result = group.StatusAudio != null ? $"{group.StatusAudio.Artist} - {group.StatusAudio.Title}" : "Сейчас у стримера в вк ничего не играет :(";
                 //Console.WriteLine("Current song: " + result);
                 //client.SendMessage(joinedChannel, result);
-                client.SendMessage(joinedChannel, "Все песни, кроме заказных, транслируются у стримера в группе вк, заходи GivePLZ https://vk.com/k_i_ra_group TakeNRG");
+                client.SendMessage(joinedChannel, "Все песни, кроме тех, что с ютуба, транслируются у стримера в группе вк, заходи GivePLZ https://vk.com/k_i_ra_group TakeNRG");
             }
         }
 
