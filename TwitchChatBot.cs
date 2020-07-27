@@ -36,8 +36,8 @@ namespace SegaTwitchBot
         static readonly TwitchPubSub pubsub = new TwitchPubSub();
         static readonly JoinedChannel joinedChannel = new JoinedChannel(TwitchInfo.ChannelName);
         static readonly HttpClient HTTPClient = new HttpClient();
-        static readonly VkApi vk_api = new VkApi();
-        static readonly Random rand = new Random();
+        //static readonly VkApi vk_api = new VkApi();
+        //static readonly Random rand = new Random();
 
         static readonly string ApplicationName = "Google Sheets API .NET Quickstart";
         static SheetsService sheets_service;
@@ -52,7 +52,7 @@ namespace SegaTwitchBot
         static Dictionary<string, int> votes;   
         static readonly HashSet<string> usersWithShield = new HashSet<string>();
         static readonly Regex regex_botsPlusToChat = new Regex(@".*?[Бб]оты?,? \+ в ча[тй].*", RegexOptions.Compiled);
-        static readonly Regex regex_hiToBot = new Regex($@".+?NortagesBot.+?([Пп]ривет|[Зз]дравствуй|[Дд]арова|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|[Qq]{1,2}).*", RegexOptions.Compiled);
+        static readonly Regex regex_hiToBot = new Regex(@".+?NortagesBot.+?([Пп]ривет|[Зз]дравствуй|[Дд]аров|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|[Qq]{1,2}).*", RegexOptions.Compiled);
 
         public void Connect()
         {            
@@ -74,6 +74,7 @@ namespace SegaTwitchBot
             //client.OnLog += Client_OnLog;
             client.OnChatCommandReceived += Client_OnChatCommandReceived;
             client.OnConnectionError += Client_OnConnectionError;
+            client.OnDisconnected += Client_OnDisconnected;
             client.OnJoinedChannel += Client_OnJoinedChannel;
             client.OnMessageReceived += Client_OnMessageReceived;
             client.OnConnected += Client_OnConnected;
@@ -116,10 +117,10 @@ namespace SegaTwitchBot
 
             // VK API
 
-            vk_api.Authorize(new ApiAuthParams
-            {
-                AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
-            });
+            //vk_api.Authorize(new ApiAuthParams
+            //{
+            //    AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
+            //});
         }
 
         // TWITCH CLIENT SUBSCRIBERS
@@ -166,99 +167,104 @@ namespace SegaTwitchBot
 
         private async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
         {
-            if (timeToPolling && (e.Command.CommandText == "ммр" || e.Command.CommandText == "mmr"))
+            if (false)
             {
-                if (int.TryParse(e.Command.ArgumentsAsString, out int vote))
+                if (timeToPolling && (e.Command.CommandText == "ммр" || e.Command.CommandText == "mmr"))
                 {
-                    votes[e.Command.ChatMessage.DisplayName] = vote;
-                    Console.WriteLine($"{e.Command.ChatMessage.DisplayName} votes for {vote}");
-                }
-            }
-            else if (e.Command.CommandText == "залславы")
-            {
-                var winners = GetHallOfFame();
-                if (e.Command.ArgumentsAsString == "фулл")
-                {
-                    var msg = "Полный список лучших ванг стрима этого месяца Pog\n";
-                    client.SendMessage(joinedChannel, msg + linkToHOF);
-                }
-                else
-                {
-                    var msg = "Топ-3 ванг стрима Pog\n";
-                    int i = 0;
-                    foreach (var winner in winners)
+                    if (int.TryParse(e.Command.ArgumentsAsString, out int vote))
                     {
-                        msg += $"{winner.Key} - {winner.Value}; ";
-                        if (i == 3) break;
-                        i++;
+                        votes[e.Command.ChatMessage.DisplayName] = vote;
+                        Console.WriteLine($"{e.Command.ChatMessage.DisplayName} votes for {vote}");
                     }
-                    msg = msg.Remove(msg.Length - 2, 2) + ".";
-                    client.SendMessage(joinedChannel, msg);
                 }
-            }
-            else if (e.Command.CommandText == "начатьголосование" && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
-            {
-                timeToPolling = true;
-                votes = new Dictionary<string, int>();
-                client.SendMessage(joinedChannel, "Голосование началось! TwitchVotes Пишите !ммр и свою ставку. Под конец стрима будет определён победитель, удачи! TakeNRG");
-                Console.WriteLine("Polling just started!");
-            }
-            else if (timeToPolling && e.Command.CommandText == "закончитьголосование" && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
-            {
-                timeToPolling = false;
-                var bin_id = "5ede5401655d87580c463af7";
-                var url = $"https://api.jsonbin.io/b/{bin_id}";
-                var content = new StringContent(
-                  JsonConvert.SerializeObject(votes),
-                  Encoding.UTF8,
-                  "application/json"
-                  );
-                var response = await HTTPClient.PutAsync(url, content);
-
-                if (response.StatusCode != HttpStatusCode.OK)
+                else if (e.Command.CommandText == "залславы")
                 {
-                    Console.WriteLine("Smth went wrong...");
-                    Console.WriteLine(response.StatusCode);
-                    Console.WriteLine(response.ReasonPhrase);
-                }
-
-                Console.WriteLine("Polling just closed!");
-                client.SendMessage(joinedChannel, "Голосование закончилось! FBtouchdown Ожидайте конца стрима, чтобы узнать результат TwitchLit");
-            }
-            else if (e.Command.CommandText == "показатьрезультат" && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
-            {
-                if (int.TryParse(e.Command.ArgumentsAsString, out int result))
-                {
-                    Console.WriteLine($"The result is {result}");
-
-                    var bin_id = "5ede5401655d87580c463af7";
-                    var url = $"https://api.jsonbin.io/b/{bin_id}";
-
-                    var response = await HTTPClient.GetAsync(url);
-                    if (response.StatusCode == HttpStatusCode.OK)
+                    var winners = GetHallOfFame();
+                    if (e.Command.ArgumentsAsString == "фулл")
                     {
-                        var votes = JsonConvert.DeserializeObject<Dictionary<string, int>>(await response.Content.ReadAsStringAsync());
-                        string winner = votes.OrderBy(item => Math.Abs(result - item.Value)).First().Key;
-                        client.SendMessage(joinedChannel, $"PorscheWIN Победитель - {winner}. Его ставка - {votes[winner]}. Поздравляем! EZY Clap");
-                        UpdateHallOfFame(winner);
-                        Console.WriteLine($"The winner is {winner}! His bet was {votes[winner]}");
+                        var msg = "Полный список лучших ванг стрима этого месяца Pog\n";
+                        client.SendMessage(joinedChannel, msg + linkToHOF);
                     }
                     else
                     {
+                        var msg = "Топ-3 ванг стрима Pog\n";
+                        int i = 0;
+                        foreach (var winner in winners)
+                        {
+                            msg += $"{winner.Key} - {winner.Value}; ";
+                            if (i == 3) break;
+                            i++;
+                        }
+                        msg = msg.Remove(msg.Length - 2, 2) + ".";
+                        client.SendMessage(joinedChannel, msg);
+                    }
+                }
+                else if (e.Command.CommandText == "начатьголосование" && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
+                {
+                    timeToPolling = true;
+                    votes = new Dictionary<string, int>();
+                    client.SendMessage(joinedChannel, "Голосование началось! TwitchVotes Пишите !ммр и свою ставку. Под конец стрима будет определён победитель, удачи! TakeNRG");
+                    Console.WriteLine("Polling just started!");
+                }
+                else if (timeToPolling && e.Command.CommandText == "закончитьголосование" && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
+                {
+                    timeToPolling = false;
+                    var bin_id = "5ede5401655d87580c463af7";
+                    var url = $"https://api.jsonbin.io/b/{bin_id}";
+                    var content = new StringContent(
+                      JsonConvert.SerializeObject(votes),
+                      Encoding.UTF8,
+                      "application/json"
+                      );
+                    var response = await HTTPClient.PutAsync(url, content);
+
+                    if (response.StatusCode != HttpStatusCode.OK)
+                    {
                         Console.WriteLine("Smth went wrong...");
+                        Console.WriteLine(response.StatusCode);
                         Console.WriteLine(response.ReasonPhrase);
+                    }
+
+                    Console.WriteLine("Polling just closed!");
+                    client.SendMessage(joinedChannel, "Голосование закончилось! FBtouchdown Ожидайте конца стрима, чтобы узнать результат TwitchLit");
+                }
+                else if (e.Command.CommandText == "показатьрезультат" && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
+                {
+                    if (int.TryParse(e.Command.ArgumentsAsString, out int result))
+                    {
+                        Console.WriteLine($"The result is {result}");
+
+                        var bin_id = "5ede5401655d87580c463af7";
+                        var url = $"https://api.jsonbin.io/b/{bin_id}";
+
+                        var response = await HTTPClient.GetAsync(url);
+                        if (response.StatusCode == HttpStatusCode.OK)
+                        {
+                            var votes = JsonConvert.DeserializeObject<Dictionary<string, int>>(await response.Content.ReadAsStringAsync());
+                            string winner = votes.OrderBy(item => Math.Abs(result - item.Value)).First().Key;
+                            client.SendMessage(joinedChannel, $"PorscheWIN Победитель - {winner}. Его ставка - {votes[winner]}. Поздравляем! EZY Clap");
+                            UpdateHallOfFame(winner);
+                            Console.WriteLine($"The winner is {winner}! His bet was {votes[winner]}");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Smth went wrong...");
+                            Console.WriteLine(response.ReasonPhrase);
+                        }
                     }
                 }
             }
-            else if (e.Command.CommandText == "песня" || e.Command.CommandText == "song")
+            
+            else if (new string[] { "song", "music", "песня", "музыка" }.Contains(e.Command.CommandText))
             {
                 //var group = vk_api.Groups.GetByIdAsync(null, "120235040", GroupsFields.Status).Result.FirstOrDefault();
                 //var result = group.StatusAudio != null ? $"{group.StatusAudio.Artist} - {group.StatusAudio.Title}" : "Сейчас у стримера в вк ничего не играет :(";
                 //Console.WriteLine("Current song: " + result);
                 //client.SendMessage(joinedChannel, result);
-                client.SendMessage(joinedChannel, "Все песни, кроме тех, что с ютуба, транслируются у стримера в группе вк, заходи GivePLZ https://vk.com/k_i_ra_group TakeNRG");
+                var prefix = string.IsNullOrEmpty(e.Command.ArgumentsAsString) ? e.Command.ArgumentsAsString + ", " : "";
+                client.SendMessage(joinedChannel, $"{prefix}Все песни, кроме тех, что с ютуба, транслируются у стримера в группе вк, заходи GivePLZ https://vk.com/k_i_ra_group TakeNRG");
             }
-        }
+        }        
 
         private void Client_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
         {
@@ -287,11 +293,7 @@ namespace SegaTwitchBot
                     usersWithShield.Remove(e.ChatMessage.DisplayName);
                     return;
                 }
-                client.TimeoutUser(joinedChannel, e.ChatMessage.DisplayName, TimeSpan.FromMinutes(TIMEOUTTIME));
-                if (e.ChatMessage.DisplayName.ToLower() == "segatron99k")
-                {
-                    client.SendMessage(joinedChannel, "Прости, создатель PepeHands");
-                }
+                client.TimeoutUser(joinedChannel, e.ChatMessage.DisplayName, TimeSpan.FromMinutes(TIMEOUTTIME));                
                 toTimeoutUserBelow = false;
                 Console.WriteLine($"{e.ChatMessage.DisplayName} is banned on {TIMEOUTTIME} minutes!");
                 return;
@@ -304,6 +306,20 @@ namespace SegaTwitchBot
             {
                 client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} Приветствую MrDestructoid");
             }
+            else if (e.ChatMessage.Message.Contains("selphy"))
+            {
+                Console.WriteLine("Selphy sub - " + e.ChatMessage.DisplayName);
+            }
+        }
+
+        private void Client_OnConnectionError(object sender, OnConnectionErrorArgs e)
+        {
+            Console.WriteLine(e.Error);
+        }
+
+        private void Client_OnDisconnected(object sender, OnDisconnectedEventArgs e)
+        {
+            Disconnect();
         }
 
         // PUBSUB SUBSCRIBERS
@@ -335,7 +351,7 @@ namespace SegaTwitchBot
                     Console.WriteLine($"{e.DisplayName} took a shield!");
                     usersWithShield.Add(e.DisplayName);
                 }
-            }
+            }            
         }
 
         private static void OnPubSubServiceConnected(object sender, EventArgs e)
@@ -354,10 +370,8 @@ namespace SegaTwitchBot
                 Console.WriteLine($"Failed to listen! Error: {e.Response.Error}");
         }
 
-        private void Client_OnConnectionError(object sender, OnConnectionErrorArgs e)
-        {
-            Console.WriteLine(e.Error);
-        }
+
+        // CUSTOM   
 
         Dictionary<string, int> GetHallOfFame()
         {
@@ -409,7 +423,7 @@ namespace SegaTwitchBot
             upd_request.Execute();
         }
 
-        internal void Disconnect()
+        private void Disconnect()
         {
             Console.WriteLine("Disconnecting...");
             //client.SendMessage(joinedChannel, "The plug has been pulled. My time is up. Until next time. ResidentSleeper");
