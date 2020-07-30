@@ -269,6 +269,10 @@ namespace SegaTwitchBot
                 var prefix = string.IsNullOrEmpty(e.Command.ArgumentsAsString) ? e.Command.ArgumentsAsString + ", " : "";
                 client.SendMessage(joinedChannel, $"{prefix}Все песни, кроме тех, что с ютуба, транслируются у стримера в группе вк, заходи GivePLZ https://vk.com/k_i_ra_group TakeNRG");
             }
+            else if (e.Command.CommandText == "промокод")
+            {
+                client.SendMessage(joinedChannel, "KIRA - лучший промокод на MYCSGOO.NET MrDestructoid");
+            }
         }
 
         private void Client_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
@@ -337,7 +341,6 @@ namespace SegaTwitchBot
 
         private static void OnRewardRedeemed(object sender, OnRewardRedeemedArgs e)
         {
-            Console.WriteLine(e.Status);
             if (e.Status == "UNFULFILLED") {
                 Console.WriteLine("\nSomeone redeemed a reward!");
                 Console.WriteLine($"Name: {e.DisplayName},\nStatus: {e.Status},\nTitle: {e.RewardTitle},\nMessage: {e.Message},\nPrompt: {e.RewardPrompt}\n");
@@ -346,12 +349,10 @@ namespace SegaTwitchBot
 
                 if (e.RewardTitle.Contains("Таймач самому себе"))
                 {
-                    Console.WriteLine("!Таймач самому себе!");
                     client.TimeoutUser(joinedChannel, e.DisplayName, TimeSpan.FromMinutes(10));
                 }
                 else if (e.RewardTitle.Contains("Таймач человеку снизу"))
                 {
-                    Console.WriteLine("!Таймач человеку снизу!");
                     toTimeoutUserBelow = true;
                 }
                 else if (false && e.RewardTitle.Contains(rewardTestName))
