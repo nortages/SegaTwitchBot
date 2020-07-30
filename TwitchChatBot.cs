@@ -27,6 +27,11 @@ using Google.Apis.Auth.OAuth2;
 using VkNet;
 using VkNet.Model;
 using VkNet.Enums.Filters;
+using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Support.UI;
+using OpenQA.Selenium.Support.Extensions;
+using System.Threading;
 
 namespace SegaTwitchBot
 {
@@ -264,7 +269,7 @@ namespace SegaTwitchBot
                 var prefix = string.IsNullOrEmpty(e.Command.ArgumentsAsString) ? e.Command.ArgumentsAsString + ", " : "";
                 client.SendMessage(joinedChannel, $"{prefix}Все песни, кроме тех, что с ютуба, транслируются у стримера в группе вк, заходи GivePLZ https://vk.com/k_i_ra_group TakeNRG");
             }
-        }        
+        }
 
         private void Client_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
         {
@@ -308,7 +313,7 @@ namespace SegaTwitchBot
             }
             else if (e.ChatMessage.Message.Contains("selphy"))
             {
-                Console.WriteLine("Selphy sub - " + e.ChatMessage.DisplayName);
+                Console.WriteLine("\nSelphy sub - " + e.ChatMessage.DisplayName + '\n');
             }
         }
 
@@ -332,6 +337,7 @@ namespace SegaTwitchBot
 
         private static void OnRewardRedeemed(object sender, OnRewardRedeemedArgs e)
         {
+            Console.WriteLine(e.Status);
             if (e.Status == "UNFULFILLED") {
                 Console.WriteLine("\nSomeone redeemed a reward!");
                 Console.WriteLine($"Name: {e.DisplayName},\nStatus: {e.Status},\nTitle: {e.RewardTitle},\nMessage: {e.Message},\nPrompt: {e.RewardPrompt}\n");
@@ -340,10 +346,12 @@ namespace SegaTwitchBot
 
                 if (e.RewardTitle.Contains("Таймач самому себе"))
                 {
+                    Console.WriteLine("!Таймач самому себе!");
                     client.TimeoutUser(joinedChannel, e.DisplayName, TimeSpan.FromMinutes(10));
                 }
                 else if (e.RewardTitle.Contains("Таймач человеку снизу"))
                 {
+                    Console.WriteLine("!Таймач человеку снизу!");
                     toTimeoutUserBelow = true;
                 }
                 else if (false && e.RewardTitle.Contains(rewardTestName))
@@ -360,6 +368,47 @@ namespace SegaTwitchBot
             Console.WriteLine("PubSub Service is Connected");
 
             pubsub.SendTopics(TwitchInfo.BotToken);
+
+            //IWebDriver driver = new ChromeDriver(".");
+            //driver.Navigate().GoToUrl("https://www.twitch.tv/k_i_ra/chat");
+            ////driver.Navigate().GoToUrl("https://www.twitch.tv/popout/dinablin/chat");
+
+            //driver.FindElement(By.XPath("//button[@aria-label='Users in Chat']")).Click();
+
+            //var scroll_div = driver.FindElement(By.XPath("//div[@data-test-selector='scrollable-area-wrapper']/div[3]/div/div"));
+            ////driver.ExecuteJavaScript("arguments[0].scrollTo(0, arguments[0].scrollHeight);", scroll_div);
+            //driver.ExecuteJavaScript("arguments[0].scrollTop = arguments[0].scrollHeight;", scroll_div);
+            //Thread.Sleep(TimeSpan.FromSeconds(3));
+
+            //WebDriverWait wait2 = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+            //var selector = By.CssSelector("p[class='tw-capcase']");
+            //var viewers = new List<IWebElement>();
+
+            //var path1 = "//div[@aria-labelledby='chat-viewers-list-header-Moderators']";
+            //var moderators_block = wait2.Until(ExpectedConditions.ElementIsVisible(By.XPath(path1)));
+            //var moders = moderators_block.FindElements(selector);
+            //viewers.AddRange(moders);
+
+            //var path2 = "//div[@aria-labelledby='chat-viewers-list-header-Users']";
+            //var users_block = driver.FindElement(By.XPath(path2));
+            //var users = users_block.FindElements(selector);
+            //viewers.AddRange(users);
+
+            //try
+            //{
+            //    var path3 = "//div[@aria-labelledby='chat-viewers-list-header-VIPs']";
+            //    var vips_block = driver.FindElement(By.XPath(path3));
+            //    var vips = vips_block.FindElements(selector);
+            //    viewers.AddRange(vips);
+            //} catch (NoSuchElementException) { }
+
+            //var viewers_nicks = viewers.Select(n => n.Text).ToList();
+            //foreach (var viewer in viewers_nicks)
+            //{
+            //    Console.WriteLine(viewer);
+            //}
+
+            //driver.Quit();
         }
 
         private static void OnListenResponse(object sender, OnListenResponseArgs e)
@@ -371,7 +420,7 @@ namespace SegaTwitchBot
         }
 
 
-        // CUSTOM   
+        // CUSTOM
 
         Dictionary<string, int> GetHallOfFame()
         {
