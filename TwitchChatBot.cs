@@ -127,6 +127,10 @@ namespace SegaTwitchBot
             //{
             //    AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
             //});
+
+            // Check GetViewers method
+            if (GetViewers().ToList().Count > 0) Console.WriteLine("GetViewers works");
+            else Console.WriteLine("GetViewers doesn't work :(");
         }
 
         // TWITCH CLIENT SUBSCRIBERS
