@@ -48,7 +48,8 @@ namespace SegaTwitchBot
         static SheetsService sheets_service;
         static readonly string[] scopes = { SheetsService.Scope.Spreadsheets };
         const string linkToHOF = "https://docs.google.com/spreadsheets/d/19RwGl1i79-3ZuVYyytfyvsg_wVprvozMSyooAy3HaU8";
-        const string spreadsheetId = "19RwGl1i79-3ZuVYyytfyvsg_wVprvozMSyooAy3HaU8";
+        const string spreadsheetId_HOF = "19RwGl1i79-3ZuVYyytfyvsg_wVprvozMSyooAy3HaU8";
+        const string spreadsheetId_Anon = "1IoXknFKw-f_FmMrxB9-ni5wgSg5JFCJSt0Gq06m1KEM";
 
         int massGifts = 0;
         const int TIMEOUTTIME = 10;
@@ -141,6 +142,11 @@ namespace SegaTwitchBot
             {
                 client.SendMessage(joinedChannel, $"{e.GiftedSubscription.DisplayName}, спасибо за подарочные подписки! peepoLove peepoLove peepoLove");
             }
+
+            if (e.GiftedSubscription.IsAnonymous)
+            {
+                FindAnonymousGifter();
+            }
         }
 
         private void Client_OnGiftedSubscription(object sender, OnGiftedSubscriptionArgs e)
@@ -152,6 +158,11 @@ namespace SegaTwitchBot
             else
             {
                 client.SendMessage(joinedChannel, $"{e.GiftedSubscription.DisplayName}, спасибо за подарочную подписку для {e.GiftedSubscription.MsgParamRecipientDisplayName}! peepoLove");
+            }
+
+            if (e.GiftedSubscription.IsAnonymous)
+            {
+                FindAnonymousGifter();
             }
         }
 
@@ -369,47 +380,85 @@ namespace SegaTwitchBot
             Console.WriteLine("PubSub Service is Connected");
 
             pubsub.SendTopics(TwitchInfo.BotToken);
+        }
 
-            //IWebDriver driver = new ChromeDriver(".");
-            //driver.Navigate().GoToUrl("https://www.twitch.tv/k_i_ra/chat");
-            ////driver.Navigate().GoToUrl("https://www.twitch.tv/popout/dinablin/chat");
+        private static void FindAnonymousGifter()
+        {
+            var viewers = GetViewers();
+                        
+            var response = sheets_service.Spreadsheets.Values.Get(spreadsheetId_Anon, "A:A").Execute();
+            var old_records = response.Values;
+            var old_viewers = old_records != null ? old_records.Select(n => n.First().ToString()).ToList() : new List<string>();
 
-            //driver.FindElement(By.XPath("//button[@aria-label='Users in Chat']")).Click();
+            var upd_values = new List<IList<object>>();
+            var viewers_intersection = old_viewers.Count != 0 ? viewers.Intersect(old_viewers) : viewers;
+            foreach (var viewer in viewers_intersection)
+            {
+                upd_values.Add(new List<object> { viewer });
+            }
 
-            //var scroll_div = driver.FindElement(By.XPath("//div[@data-test-selector='scrollable-area-wrapper']/div[3]/div/div"));
-            ////driver.ExecuteJavaScript("arguments[0].scrollTo(0, arguments[0].scrollHeight);", scroll_div);
-            //driver.ExecuteJavaScript("arguments[0].scrollTop = arguments[0].scrollHeight;", scroll_div);
-            //Thread.Sleep(TimeSpan.FromSeconds(3));
+            ValueRange body = new ValueRange { Values = upd_values };            
+            sheets_service.Spreadsheets.Values.Clear(new ClearValuesRequest(), spreadsheetId_Anon, "A:A").Execute();
+            var upd_request = sheets_service.Spreadsheets.Values.Update(body, spreadsheetId_Anon, "A1");
+            upd_request.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
+            upd_request.Execute();
+        }
 
-            //WebDriverWait wait2 = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
-            //var selector = By.CssSelector("p[class='tw-capcase']");
-            //var viewers = new List<IWebElement>();
+        private static IList<string> GetViewers()
+        {
+            // Get a chrome driver and navigate to the stream's chat page.
+            var driver = new ChromeDriver(".");
+            driver.Navigate().GoToUrl("https://www.twitch.tv/k_i_ra/chat");
 
-            //var path1 = "//div[@aria-labelledby='chat-viewers-list-header-Moderators']";
-            //var moderators_block = wait2.Until(ExpectedConditions.ElementIsVisible(By.XPath(path1)));
-            //var moders = moderators_block.FindElements(selector);
-            //viewers.AddRange(moders);
+            // Find the element that shows users in chat and click on it.
+            driver.FindElement(By.XPath("//button[@aria-label='Users in Chat']")).Click();
+            Thread.Sleep(TimeSpan.FromSeconds(2));
 
-            //var path2 = "//div[@aria-labelledby='chat-viewers-list-header-Users']";
-            //var users_block = driver.FindElement(By.XPath(path2));
-            //var users = users_block.FindElements(selector);
-            //viewers.AddRange(users);
+            // Find the scrollable div with chat users and scrolls through them till the end.
+            var scroll_div = driver.FindElement(By.XPath("//div[@data-test-selector='scrollable-area-wrapper']/div[@class='simplebar-scroll-content chat-viewers__scroll-container']"));
+            driver.ExecuteJavaScript(@" var prevHeight = 0;
+                                        var target = arguments[0];
+                                        var theInterval = setInterval(
+                                        function () {
+                                            if (prevHeight != target.scrollHeight) {
+                                                target.scrollTop = target.scrollHeight;
+                                                prevHeight = target.scrollHeight;
+                                            }
+                                            else { clearInterval(theInterval); }
+                                        }, 500);", scroll_div);
+            // Time can be found if get the current viewers count on the stream page.
+            Thread.Sleep(TimeSpan.FromSeconds(8));
 
-            //try
-            //{
-            //    var path3 = "//div[@aria-labelledby='chat-viewers-list-header-VIPs']";
-            //    var vips_block = driver.FindElement(By.XPath(path3));
-            //    var vips = vips_block.FindElements(selector);
-            //    viewers.AddRange(vips);
-            //} catch (NoSuchElementException) { }
+            var wait2 = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+            var selector = By.CssSelector("p[class='tw-capcase']");
+            var viewers = new List<IWebElement>();
 
-            //var viewers_nicks = viewers.Select(n => n.Text).ToList();
-            //foreach (var viewer in viewers_nicks)
-            //{
-            //    Console.WriteLine(viewer);
-            //}
+            // Add moderators
+            var path1 = "//div[@aria-labelledby='chat-viewers-list-header-Moderators']";
+            var moderators_block = wait2.Until(ExpectedConditions.ElementIsVisible(By.XPath(path1)));
+            var moders = moderators_block.FindElements(selector);
+            viewers.AddRange(moders);
 
-            //driver.Quit();
+            try
+            {
+                // Add VIPs if they are.
+                var path2 = "//div[@aria-labelledby='chat-viewers-list-header-VIPs']";
+                var vips_block = driver.FindElement(By.XPath(path2));
+                var vips = vips_block.FindElements(selector);
+                viewers.AddRange(vips);
+            }
+            catch (NoSuchElementException) { }
+
+            // Add others.
+            var path3 = "//div[@aria-labelledby='chat-viewers-list-header-Users']";
+            var users_block = driver.FindElement(By.XPath(path3));
+            var users = users_block.FindElements(selector);
+            viewers.AddRange(users);
+
+            // Quit the driver and return viewers.
+            var viewers_nicks = viewers.Select(n => n.Text).ToList();
+            driver.Quit();
+            return viewers_nicks;
         }
 
         private static void OnListenResponse(object sender, OnListenResponseArgs e)
@@ -420,13 +469,12 @@ namespace SegaTwitchBot
                 Console.WriteLine($"Failed to listen! Error: {e.Response.Error}");
         }
 
-
         // CUSTOM
 
         Dictionary<string, int> GetHallOfFame()
         {
             string rangeToRead = "HallOfFame!A2:B";
-            var request = sheets_service.Spreadsheets.Values.Get(spreadsheetId, rangeToRead);
+            var request = sheets_service.Spreadsheets.Values.Get(spreadsheetId_HOF, rangeToRead);
 
             ValueRange response = request.Execute();
             var values = response.Values;
@@ -468,7 +516,7 @@ namespace SegaTwitchBot
             }
 
             ValueRange body = new ValueRange { Values = upd_values };
-            var upd_request = sheets_service.Spreadsheets.Values.Update(body, spreadsheetId, rangeToWrite);
+            var upd_request = sheets_service.Spreadsheets.Values.Update(body, spreadsheetId_HOF, rangeToWrite);
             upd_request.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
             upd_request.Execute();
         }
@@ -482,7 +530,7 @@ namespace SegaTwitchBot
             client.LeaveChannel(joinedChannel.Channel);
 
             pubsub.Disconnect();
-            client.Disconnect();
+            //client.Disconnect();
         }
     }
 }
