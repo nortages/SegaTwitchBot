@@ -411,7 +411,19 @@ namespace SegaTwitchBot
         private static IList<string> GetViewers()
         {
             // Get a chrome driver and navigate to the stream's chat page.
-            var driver = new ChromeDriver(".");
+            ChromeDriver driver;
+            try
+            {
+                driver = new ChromeDriver(".");
+            }
+            catch (DriverServiceNotFoundException)
+            {
+                var chrome_options = new ChromeOptions() {
+                    BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM")
+                };
+                //chrome_options.AddArguments("--headless", "--disable-gpu", "--no-sandbox");
+                driver = new ChromeDriver(chrome_options);
+            }
             driver.Navigate().GoToUrl("https://www.twitch.tv/k_i_ra/chat");
 
             // Find the element that shows users in chat and click on it.
