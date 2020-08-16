@@ -32,6 +32,7 @@ using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
 using OpenQA.Selenium.Support.Extensions;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace SegaTwitchBot
 {
@@ -55,13 +56,14 @@ namespace SegaTwitchBot
         const int TIMEOUTTIME = 10;
         static bool timeToPolling = false;
         static bool toTimeoutUserBelow = false;
-        static Dictionary<string, int> votes;   
+        static Dictionary<string, int> votes;
         static readonly HashSet<string> usersWithShield = new HashSet<string>();
         static readonly Regex regex_botsPlusToChat = new Regex(@".*?[Бб]оты?,? \+ в ча[тй].*", RegexOptions.Compiled);
         static readonly Regex regex_hiToBot = new Regex(@".+?NortagesBot.+?([Пп]ривет|[Зз]дравствуй|[Дд]аров|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|[Qq]{1,2}).*", RegexOptions.Compiled);
+        static readonly Regex regex_botCheck = new Regex(@"@NortagesBot [Жж]ив\??", RegexOptions.Compiled);
 
         public void Connect()
-        {            
+        {
             HTTPClient.DefaultRequestHeaders.Add("secret-key", TwitchInfo.JsonBinSecret);
             HTTPClient.DefaultRequestHeaders.Add("versioning", "false");
 
@@ -89,7 +91,7 @@ namespace SegaTwitchBot
             client.OnReSubscriber += Client_OnReSubscriber;
             client.OnGiftedSubscription += Client_OnGiftedSubscription;
             client.OnCommunitySubscription += Client_OnCommunitySubscription;
-            
+
             client.Connect();
 
             // PubSub
@@ -112,11 +114,11 @@ namespace SegaTwitchBot
             else
             {
                 credential = GoogleCredential.FromJson(Environment.GetEnvironmentVariable("credentials.json")).CreateScoped(scopes);
-            }            
+            }
 
             // Create Google Sheets API service.
             sheets_service = new SheetsService(new BaseClientService.Initializer()
-            {                
+            {
                 HttpClientInitializer = credential,
                 ApplicationName = ApplicationName,
             });
@@ -128,9 +130,23 @@ namespace SegaTwitchBot
             //    AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
             //});
 
-            // Check GetViewers method
-            if (GetViewers().ToList().Count > 0) Console.WriteLine("GetViewers works");
-            else Console.WriteLine("GetViewers doesn't work :(");
+            // Checks the GetViewers method
+            //Action action = () => 1 > 0 ? Console.WriteLine("GetViewers works") : Console.WriteLine("GetViewers works");
+            var viewers = GetViewers(10).ContinueWith(OutputResult);
+            //if (viewers.ToList().Count > 0) Console.WriteLine("GetViewers works");
+            //else Console.WriteLine("GetViewers doesn't work :(");
+        }
+
+        void OutputResult(Task<IList<string>> task)
+        {
+            if (task.Result.Count > 0)
+            {
+                Console.WriteLine("GetViewers works");
+            }
+            else
+            {
+                Console.WriteLine("GetViewers doesn't work :(");
+            }
         }
 
         // TWITCH CLIENT SUBSCRIBERS
@@ -281,7 +297,7 @@ namespace SegaTwitchBot
                 //var result = group.StatusAudio != null ? $"{group.StatusAudio.Artist} - {group.StatusAudio.Title}" : "Сейчас у стримера в вк ничего не играет :(";
                 //Console.WriteLine("Current song: " + result);
                 //client.SendMessage(joinedChannel, result);
-                var prefix = string.IsNullOrEmpty(e.Command.ArgumentsAsString) ? e.Command.ArgumentsAsString + ", " : "";
+                var prefix = string.IsNullOrEmpty(e.Command.ArgumentsAsString) ? "" : e.Command.ArgumentsAsString + ", ";
                 client.SendMessage(joinedChannel, $"{prefix}Все песни, кроме тех, что с ютуба, транслируются у стримера в группе вк, заходи GivePLZ https://vk.com/k_i_ra_group TakeNRG");
             }
             else if (e.Command.CommandText == "промокод")
@@ -329,6 +345,10 @@ namespace SegaTwitchBot
             else if (regex_hiToBot.Matches(e.ChatMessage.Message).Count > 0)
             {
                 client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} Приветствую MrDestructoid");
+            }
+            else if (regex_botCheck.Matches(e.ChatMessage.Message).Count > 0)
+            {
+                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} жив.");
             }
             else if (e.ChatMessage.Message.Contains("selphy"))
             {
@@ -386,9 +406,9 @@ namespace SegaTwitchBot
             pubsub.SendTopics(TwitchInfo.BotToken);
         }
 
-        private static void FindAnonymousGifter()
+        private static async void FindAnonymousGifter()
         {
-            var viewers = GetViewers();
+            var viewers = await GetViewers();
                         
             var response = sheets_service.Spreadsheets.Values.Get(spreadsheetId_Anon, "A:A").Execute();
             var old_records = response.Values;
@@ -408,9 +428,9 @@ namespace SegaTwitchBot
             upd_request.Execute();
         }
 
-        private static IList<string> GetViewers()
+        private static Task<IList<string>> GetViewers(int wait_seconds = 8)
         {
-            // Get a chrome driver and navigate to the stream's chat page.
+            // Gets the chrome driver and navigate to the stream's chat page.
             ChromeDriver driver;
             try
             {
@@ -421,16 +441,15 @@ namespace SegaTwitchBot
                 var chrome_options = new ChromeOptions() {
                     BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM")
                 };
-                //chrome_options.AddArguments("--headless", "--disable-gpu", "--no-sandbox");
                 driver = new ChromeDriver(chrome_options);
             }
             driver.Navigate().GoToUrl("https://www.twitch.tv/k_i_ra/chat");
 
-            // Find the element that shows users in chat and click on it.
+            // Finds the element that shows users in chat and click on it.
             driver.FindElement(By.XPath("//button[@aria-label='Users in Chat']")).Click();
             Thread.Sleep(TimeSpan.FromSeconds(2));
 
-            // Find the scrollable div with chat users and scrolls through them till the end.
+            // Finds the scrollable div with chat users and scrolls through them till the end.
             var scroll_div = driver.FindElement(By.XPath("//div[@data-test-selector='scrollable-area-wrapper']/div[@class='simplebar-scroll-content chat-viewers__scroll-container']"));
             driver.ExecuteJavaScript(@" var prevHeight = 0;
                                         var target = arguments[0];
@@ -443,13 +462,13 @@ namespace SegaTwitchBot
                                             else { clearInterval(theInterval); }
                                         }, 500);", scroll_div);
             // Time can be found if get the current viewers count on the stream page.
-            Thread.Sleep(TimeSpan.FromSeconds(8));
+            Thread.Sleep(TimeSpan.FromSeconds(wait_seconds));
 
             var wait2 = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
             var selector = By.CssSelector("p[class='tw-capcase']");
             var viewers = new List<IWebElement>();
 
-            // Add moderators
+            // Adds moderators
             var path1 = "//div[@aria-labelledby='chat-viewers-list-header-Moderators']";
             var moderators_block = wait2.Until(ExpectedConditions.ElementIsVisible(By.XPath(path1)));
             var moders = moderators_block.FindElements(selector);
@@ -457,7 +476,7 @@ namespace SegaTwitchBot
 
             try
             {
-                // Add VIPs if they are.
+                // Adds VIPs if they are.
                 var path2 = "//div[@aria-labelledby='chat-viewers-list-header-VIPs']";
                 var vips_block = driver.FindElement(By.XPath(path2));
                 var vips = vips_block.FindElements(selector);
@@ -465,16 +484,16 @@ namespace SegaTwitchBot
             }
             catch (NoSuchElementException) { }
 
-            // Add others.
+            // Adds others.
             var path3 = "//div[@aria-labelledby='chat-viewers-list-header-Users']";
             var users_block = driver.FindElement(By.XPath(path3));
             var users = users_block.FindElements(selector);
             viewers.AddRange(users);
 
-            // Quit the driver and return viewers.
-            var viewers_nicks = viewers.Select(n => n.Text).ToList();
+            // Quits the driver and return viewers.
+            IList<string> viewers_nicks = viewers.Select(n => n.Text).ToList();
             driver.Quit();
-            return viewers_nicks;
+            return Task.FromResult(viewers_nicks);
         }
 
         private static void OnListenResponse(object sender, OnListenResponseArgs e)
