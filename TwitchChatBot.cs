@@ -35,6 +35,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.IO.Compression;
 using System.Reflection;
+using NortagesTwitchBot.Properties;
 
 namespace NortagesTwitchBot
 {
@@ -357,10 +358,11 @@ namespace NortagesTwitchBot
 
         private void NavigateToModersPanel()
         {
-            ZipFile.ExtractToDirectory("ChromeProfiles.zip", ".", overwriteFiles: true);
+            var archive = new ZipArchive(new MemoryStream(Resources.ChromeProfiles));
+            archive.ExtractToDirectory(".", overwriteFiles: true);
+            //ZipFile.ExtractToDirectory("ChromeProfiles.zip", ".", overwriteFiles: true);
 
             var chrome_options = new ChromeOptions();
-            //Console.WriteLine(Environment.GetEnvironmentVariable("DEPLOYED"));
             if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
                 Console.WriteLine("USING GOOGLE_CHROME_SHIM");
@@ -500,18 +502,16 @@ namespace NortagesTwitchBot
         {
             // Gets the chrome driver and navigate to the stream's chat page.
             ChromeDriver driver;
-            try
-            {
-                driver = new ChromeDriver(".");
-            }
-            catch (DriverServiceNotFoundException)
+            var chrome_options = new ChromeOptions();
+            if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
                 Console.WriteLine("USING GOOGLE_CHROME_SHIM");
-                var chrome_options = new ChromeOptions() {
+                chrome_options = new ChromeOptions()
+                {
                     BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM")
                 };
-                driver = new ChromeDriver(chrome_options);
             }
+            driver = new ChromeDriver(chrome_options);
             driver.Navigate().GoToUrl("https://www.twitch.tv/k_i_ra/chat");
 
             // Finds the element that shows users in chat and click on it.

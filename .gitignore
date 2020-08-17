@@ -659,3 +659,4 @@ MigrationBackup/
 old_config.json
 credentials.json
 .env
+chromedriver.exe
