@@ -33,8 +33,10 @@ using OpenQA.Selenium.Support.UI;
 using OpenQA.Selenium.Support.Extensions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.IO.Compression;
+using System.Reflection;
 
-namespace SegaTwitchBot
+namespace NortagesTwitchBot
 {
     class TwitchChatBot
     {
@@ -52,6 +54,8 @@ namespace SegaTwitchBot
         const string spreadsheetId_HOF = "19RwGl1i79-3ZuVYyytfyvsg_wVprvozMSyooAy3HaU8";
         const string spreadsheetId_Anon = "1IoXknFKw-f_FmMrxB9-ni5wgSg5JFCJSt0Gq06m1KEM";
 
+        ChromeDriver driver;
+
         int massGifts = 0;
         const int TIMEOUTTIME = 10;
         static bool timeToPolling = false;
@@ -60,7 +64,7 @@ namespace SegaTwitchBot
         static readonly HashSet<string> usersWithShield = new HashSet<string>();
         static readonly Regex regex_botsPlusToChat = new Regex(@".*?[Бб]оты?,? \+ в ча[тй].*", RegexOptions.Compiled);
         static readonly Regex regex_hiToBot = new Regex(@".+?NortagesBot.+?([Пп]ривет|[Зз]дравствуй|[Дд]аров|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|[Qq]{1,2}).*", RegexOptions.Compiled);
-        static readonly Regex regex_botCheck = new Regex(@"@NortagesBot [Жж]ив\??", RegexOptions.Compiled);
+        static readonly Regex regex_botCheck = new Regex(@"@NortagesBot [Жж]ив\?", RegexOptions.Compiled);
 
         public void Connect()
         {
@@ -101,7 +105,6 @@ namespace SegaTwitchBot
             pubsub.OnStreamUp += OnStreamUp;
 
             pubsub.ListenToRewards(TwitchHelpers.GetUserId(TwitchInfo.ChannelName));
-
             pubsub.Connect();
 
             GoogleCredential credential;
@@ -130,11 +133,11 @@ namespace SegaTwitchBot
             //    AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
             //});
 
+            //GetChannelStats();
             // Checks the GetViewers method
-            //Action action = () => 1 > 0 ? Console.WriteLine("GetViewers works") : Console.WriteLine("GetViewers works");
-            var viewers = GetViewers(10).ContinueWith(OutputResult);
-            //if (viewers.ToList().Count > 0) Console.WriteLine("GetViewers works");
-            //else Console.WriteLine("GetViewers doesn't work :(");
+            //var viewers = GetViewers(10).ContinueWith(OutputResult);
+
+            NavigateToModersPanel();
         }
 
         void OutputResult(Task<IList<string>> task)
@@ -302,10 +305,70 @@ namespace SegaTwitchBot
             }
             else if (e.Command.CommandText == "промокод")
             {
-                client.SendMessage(joinedChannel, "KIRA - лучший промокод на MYCSGOO.NET MrDestructoid");
+                client.SendMessage(joinedChannel, "kira - лучший промокод на mycsgoo.net TakeNRG");
+            }
+            else if (new string[] { "bans", "баны" }.Contains(e.Command.CommandText))
+            {
+                string output;
+                var senderUsername = e.Command.ChatMessage.DisplayName;
+                try
+                {
+                    if (string.IsNullOrEmpty(e.Command.ArgumentsAsString))
+                    {
+                        (string timeouts, string bans) = GetChannelStats(senderUsername);
+                        output = $"@{senderUsername}, you have {timeouts} timeouts and {bans} bans.";
+                    }
+                    else
+                    {
+                        var userName = e.Command.ArgumentsAsString.TrimStart('@');
+                        (string timeouts, string bans) = GetChannelStats(userName);
+                        output = $"@{senderUsername}, the user {userName} has {timeouts} timeouts and {bans} bans.";
+                    }
+                }
+                catch (NoSuchElementException)
+                {
+                    output = $"@{senderUsername}, the user {e.Command.ArgumentsAsString} isn't present on the stream now.";
+                }
+
+                client.SendMessage(joinedChannel, output);
+                Console.WriteLine(output);
             }
         }
 
+        private (string timeouts, string bans) GetChannelStats(string userName)
+        {
+            var inputElement = driver.FindElement(By.XPath("//input[@name='viewers-filter']"), 10);
+            inputElement.Clear();
+            inputElement.SendKeys(userName);
+           
+            var userElement = driver.FindElement(By.XPath($"//p[text()='{userName.ToLower()}']"), 5);
+            userElement.Click();
+            var infoPanel = driver.FindElement(By.XPath("//div[@data-test-selector='viewer-card-mod-drawer']"), 2);
+            var panelElements = infoPanel.FindElements(By.XPath(".//div[@data-test-selector='viewer-card-mod-drawer-tab']"));
+            
+            var xpath = ".//p[contains(@class, 'tw-c-text-link')]";
+            var timeouts = panelElements[1].FindElement(By.XPath(xpath), 3).Text;
+            var bans = panelElements[2].FindElement(By.XPath(xpath), 3).Text;
+
+            driver.FindElement(By.XPath("//button[@data-a-target='user-details-close']")).Click();
+
+            return (timeouts, bans);
+        }
+
+        private void NavigateToModersPanel()
+        {
+            ZipFile.ExtractToDirectory("ChromeProfiles.zip", ".", overwriteFiles: true);
+
+            var chrome_options = new ChromeOptions();
+            if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
+            {
+                chrome_options.BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM");
+            }
+            chrome_options.AddArgument("user-data-dir=./ChromeProfiles");
+
+            driver = new ChromeDriver(chrome_options);
+            driver.Navigate().GoToUrl("https://www.twitch.tv/moderator/k_i_ra");
+        }
         private void Client_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
         {
             Console.WriteLine($"{e.DateTime}: {e.BotUsername} - {e.Data}");

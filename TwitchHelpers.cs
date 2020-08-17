@@ -8,7 +8,7 @@ using TwitchLib.Api.Helix.Models.Streams;
 using TwitchLib.Api.Helix.Models.Users;
 using TwitchLib.Api.V5.Models.Channels;
 
-namespace SegaTwitchBot
+namespace NortagesTwitchBot
 {
     public static class TwitchHelpers
     {

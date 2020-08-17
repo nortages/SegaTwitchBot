@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace SegaTwitchBot
+namespace NortagesTwitchBot
 {
     class Program
     {
