@@ -133,10 +133,10 @@ namespace NortagesTwitchBot
             //    AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
             //});
 
-            //GetChannelStats();
             // Checks the GetViewers method
-            //var viewers = GetViewers(10).ContinueWith(OutputResult);
+            var viewers = GetViewers(10).ContinueWith(OutputResult);
 
+            //GetChannelStats();
             NavigateToModersPanel();
         }
 
@@ -363,6 +363,7 @@ namespace NortagesTwitchBot
             //Console.WriteLine(Environment.GetEnvironmentVariable("DEPLOYED"));
             if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
+                Console.WriteLine("USING GOOGLE_CHROME_SHIM");
                 chrome_options.BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM");
             }
             chrome_options.AddArgument("user-data-dir=./ChromeProfiles");
@@ -505,6 +506,7 @@ namespace NortagesTwitchBot
             }
             catch (DriverServiceNotFoundException)
             {
+                Console.WriteLine("USING GOOGLE_CHROME_SHIM");
                 var chrome_options = new ChromeOptions() {
                     BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM")
                 };
