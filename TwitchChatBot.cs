@@ -134,7 +134,7 @@ namespace NortagesTwitchBot
             //    AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
             //});
 
-            NavigateToModersPanel();
+            //NavigateToModersPanel();
 
             // Checks the GetViewers method
             var viewers = GetViewers(10).ContinueWith(OutputResult);
@@ -487,7 +487,6 @@ namespace NortagesTwitchBot
 
         private void NavigateToModersPanel()
         {
-            Console.WriteLine("The length of archive: " + Resources.ChromeProfiles.Length);
             var archive = new ZipArchive(new MemoryStream(Resources.ChromeProfiles));
             archive.ExtractToDirectory(".", overwriteFiles: true);
 
@@ -511,6 +510,9 @@ namespace NortagesTwitchBot
 
         private static Task<IList<string>> GetViewers(int wait_seconds = 8)
         {
+            var archive = new ZipArchive(new MemoryStream(Resources.ChromeProfiles));
+            archive.ExtractToDirectory(".", overwriteFiles: true);
+
             // Gets the chrome driver and navigate to the stream's chat page.
             ChromeDriver driver;
             var chrome_options = new ChromeOptions();
@@ -519,6 +521,7 @@ namespace NortagesTwitchBot
                 Console.WriteLine("USING GOOGLE_CHROME_SHIM");
                 chrome_options.BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM");
             }
+            chrome_options.AddArgument("user-data-dir=./ChromeProfiles");
 
             driver = new ChromeDriver(chrome_options);
             driver.Navigate().GoToUrl("https://www.twitch.tv/k_i_ra/chat");
