@@ -134,11 +134,12 @@ namespace NortagesTwitchBot
             //    AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
             //});
 
+            NavigateToModersPanel();
+
             // Checks the GetViewers method
             var viewers = GetViewers(10).ContinueWith(OutputResult);
 
             //GetChannelStats();
-            NavigateToModersPanel();
         }
 
         void OutputResult(Task<IList<string>> task)
@@ -153,7 +154,7 @@ namespace NortagesTwitchBot
             }
         }
 
-        // TWITCH CLIENT SUBSCRIBERS
+        #region TWITCH CLIENT SUBSCRIBERS
 
         private void Client_OnCommunitySubscription(object sender, OnCommunitySubscriptionArgs e)
         {
@@ -336,47 +337,6 @@ namespace NortagesTwitchBot
             }
         }
 
-        private (string timeouts, string bans) GetChannelStats(string userName)
-        {
-            var inputElement = driver.FindElement(By.XPath("//input[@name='viewers-filter']"), 10);
-            inputElement.Clear();
-            inputElement.SendKeys(userName);
-           
-            var userElement = driver.FindElement(By.XPath($"//p[text()='{userName.ToLower()}']"), 5);
-            userElement.Click();
-            var infoPanel = driver.FindElement(By.XPath("//div[@data-test-selector='viewer-card-mod-drawer']"), 2);
-            var panelElements = infoPanel.FindElements(By.XPath(".//div[@data-test-selector='viewer-card-mod-drawer-tab']"));
-            
-            var xpath = ".//p[contains(@class, 'tw-c-text-link')]";
-            var timeouts = panelElements[1].FindElement(By.XPath(xpath), 3).Text;
-            var bans = panelElements[2].FindElement(By.XPath(xpath), 3).Text;
-
-            driver.FindElement(By.XPath("//button[@data-a-target='user-details-close']")).Click();
-
-            return (timeouts, bans);
-        }
-
-        private void NavigateToModersPanel()
-        {
-            var archive = new ZipArchive(new MemoryStream(Resources.ChromeProfiles));
-            archive.ExtractToDirectory(".", overwriteFiles: true);
-            //ZipFile.ExtractToDirectory("ChromeProfiles.zip", ".", overwriteFiles: true);
-
-            var chrome_options = new ChromeOptions();
-            if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
-            {
-                Console.WriteLine("USING GOOGLE_CHROME_SHIM");
-                Console.WriteLine(Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM"));
-                chrome_options.BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM");
-            }
-            chrome_options.AddArgument("user-data-dir=./ChromeProfiles");
-
-            //chrome_options.AddArgument("proxy-server='direct://'");
-            //chrome_options.AddArgument("proxy-bypass-list=*");
-
-            driver = new ChromeDriver(chrome_options);
-            driver.Navigate().GoToUrl("https://www.twitch.tv/moderator/k_i_ra");
-        }
         private void Client_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
         {
             Console.WriteLine($"{e.DateTime}: {e.BotUsername} - {e.Data}");
@@ -437,7 +397,9 @@ namespace NortagesTwitchBot
             Disconnect();
         }
 
-        // PUBSUB SUBSCRIBERS
+        #endregion TWITCH CLIENT SUBSCRIBERS
+
+        #region PUBSUB SUBSCRIBERS
 
         private void OnStreamUp(object sender, OnStreamUpArgs e)
         {
@@ -499,6 +461,54 @@ namespace NortagesTwitchBot
             upd_request.Execute();
         }
 
+        #endregion PUBSUB SUBSCRIBERS
+
+        #region CUSTOM
+
+        private (string timeouts, string bans) GetChannelStats(string userName)
+        {
+            var inputElement = driver.FindElement(By.XPath("//input[@name='viewers-filter']"), 10);
+            inputElement.Clear();
+            inputElement.SendKeys(userName);
+           
+            var userElement = driver.FindElement(By.XPath($"//p[text()='{userName.ToLower()}']"), 5);
+            userElement.Click();
+            var infoPanel = driver.FindElement(By.XPath("//div[@data-test-selector='viewer-card-mod-drawer']"), 2);
+            var panelElements = infoPanel.FindElements(By.XPath(".//div[@data-test-selector='viewer-card-mod-drawer-tab']"));
+            
+            var xpath = ".//p[contains(@class, 'tw-c-text-link')]";
+            var timeouts = panelElements[1].FindElement(By.XPath(xpath), 3).Text;
+            var bans = panelElements[2].FindElement(By.XPath(xpath), 3).Text;
+
+            driver.FindElement(By.XPath("//button[@data-a-target='user-details-close']")).Click();
+
+            return (timeouts, bans);
+        }
+
+        private void NavigateToModersPanel()
+        {
+            Console.WriteLine("The length of archive: " + Resources.ChromeProfiles.Length);
+            var archive = new ZipArchive(new MemoryStream(Resources.ChromeProfiles));
+            archive.ExtractToDirectory(".", overwriteFiles: true);
+
+            //ZipFile.ExtractToDirectory("ChromeProfiles.zip", ".", overwriteFiles: true);
+
+            var chrome_options = new ChromeOptions();
+            if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
+            {
+                Console.WriteLine("USING GOOGLE_CHROME_SHIM");
+                Console.WriteLine(Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM"));
+                chrome_options.BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM");
+            }
+            chrome_options.AddArgument("user-data-dir=./ChromeProfiles");
+
+            //chrome_options.AddArgument("proxy-server='direct://'");
+            //chrome_options.AddArgument("proxy-bypass-list=*");
+
+            driver = new ChromeDriver(chrome_options);
+            driver.Navigate().GoToUrl("https://www.twitch.tv/moderator/k_i_ra");
+        }
+
         private static Task<IList<string>> GetViewers(int wait_seconds = 8)
         {
             // Gets the chrome driver and navigate to the stream's chat page.
@@ -507,11 +517,9 @@ namespace NortagesTwitchBot
             if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
                 Console.WriteLine("USING GOOGLE_CHROME_SHIM");
-                chrome_options = new ChromeOptions()
-                {
-                    BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM")
-                };
+                chrome_options.BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM");
             }
+
             driver = new ChromeDriver(chrome_options);
             driver.Navigate().GoToUrl("https://www.twitch.tv/k_i_ra/chat");
 
@@ -574,8 +582,6 @@ namespace NortagesTwitchBot
                 Console.WriteLine($"Failed to listen! Error: {e.Response.Error}");
         }
 
-        // CUSTOM
-
         Dictionary<string, int> GetHallOfFame()
         {
             string rangeToRead = "HallOfFame!A2:B";
@@ -637,5 +643,7 @@ namespace NortagesTwitchBot
             pubsub.Disconnect();
             //client.Disconnect();
         }
+
+        #endregion CUSTOM
     }
 }
