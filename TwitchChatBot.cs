@@ -360,11 +360,15 @@ namespace NortagesTwitchBot
             ZipFile.ExtractToDirectory("ChromeProfiles.zip", ".", overwriteFiles: true);
 
             var chrome_options = new ChromeOptions();
+            //Console.WriteLine(Environment.GetEnvironmentVariable("DEPLOYED"));
             if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
                 chrome_options.BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM");
             }
             chrome_options.AddArgument("user-data-dir=./ChromeProfiles");
+
+            chrome_options.AddArgument("proxy-server='direct://'");
+            chrome_options.AddArgument("proxy-bypass-list=*");
 
             driver = new ChromeDriver(chrome_options);
             driver.Navigate().GoToUrl("https://www.twitch.tv/moderator/k_i_ra");
