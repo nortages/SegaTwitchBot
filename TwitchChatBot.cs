@@ -67,6 +67,7 @@ namespace NortagesTwitchBot
         static readonly Regex regex_botsPlusToChat = new Regex(@".*?[Бб]оты?,? \+ в ча[тй].*", RegexOptions.Compiled);
         static readonly Regex regex_hiToBot = new Regex(@".+?NortagesBot.+?([Пп]ривет|[Зз]дравствуй|[Дд]аров|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|[Qq]{1,2}).*", RegexOptions.Compiled);
         static readonly Regex regex_botCheck = new Regex(@"@NortagesBot [Жж]ив\?", RegexOptions.Compiled);
+        static readonly Regex regex_botLox = new Regex(@"@NortagesBot [kupaLox|лох|Лох]", RegexOptions.Compiled);
 
         public void Connect()
         {
@@ -403,9 +404,9 @@ namespace NortagesTwitchBot
             {
                 client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} жив.");
             }
-            else if (e.ChatMessage.Message.Contains("selphy"))
+            else if (regex_botLox.Matches(e.ChatMessage.Message).Count > 0)
             {
-                Console.WriteLine("\nSelphy sub - " + e.ChatMessage.DisplayName + '\n');
+                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} сам лох");
             }
         }
 
