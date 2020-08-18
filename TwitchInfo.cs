@@ -21,6 +21,7 @@ namespace NortagesTwitchBot
 
                 ChannelName = items["ChannelName"];
                 BotUsername = items["BotUsername"];
+                BotPassword = items["BotPassword"];
                 BotToken = items["BotToken"];
                 ClientID = items["ClientID"];
                 RefreshToken = items["RefreshToken"];
@@ -31,6 +32,7 @@ namespace NortagesTwitchBot
             {
                 ChannelName = Environment.GetEnvironmentVariable("ChannelName");
                 BotUsername = Environment.GetEnvironmentVariable("BotUsername");
+                BotPassword = Environment.GetEnvironmentVariable("BotPassword");
                 BotToken = Environment.GetEnvironmentVariable("BotToken");
                 ClientID = Environment.GetEnvironmentVariable("ClientID");
                 RefreshToken = Environment.GetEnvironmentVariable("RefreshToken");
@@ -41,6 +43,7 @@ namespace NortagesTwitchBot
 
         public static string ChannelName { get; private set; }
         public static string BotUsername { get; private set; }
+        public static string BotPassword { get; private set; }
         public static string BotToken { get; private set; }
         public static string ClientID { get; private set; }
         public static string RefreshToken { get; private set; }

@@ -4,6 +4,8 @@ using System.Net;
 using System.Text;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
@@ -26,16 +28,14 @@ using Google.Apis.Auth.OAuth2;
 
 using VkNet;
 using VkNet.Model;
-using VkNet.Enums.Filters;
+
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
 using OpenQA.Selenium.Support.Extensions;
-using System.Threading;
-using System.Threading.Tasks;
-using System.IO.Compression;
-using System.Reflection;
-using NortagesTwitchBot.Properties;
+using MailKit.Net.Imap;
+using MailKit;
+using MailKit.Search;
 
 namespace NortagesTwitchBot
 {
@@ -45,8 +45,8 @@ namespace NortagesTwitchBot
         static readonly TwitchPubSub pubsub = new TwitchPubSub();
         static readonly JoinedChannel joinedChannel = new JoinedChannel(TwitchInfo.ChannelName);
         static readonly HttpClient HTTPClient = new HttpClient();
-        //static readonly VkApi vk_api = new VkApi();
-        //static readonly Random rand = new Random();
+        static readonly VkApi vk_api = new VkApi();
+        static readonly Random rand = new Random();
 
         static readonly string ApplicationName = "Google Sheets API .NET Quickstart";
         static SheetsService sheets_service;
@@ -58,6 +58,7 @@ namespace NortagesTwitchBot
         ChromeDriver driver;
 
         int massGifts = 0;
+        bool isVotesEnable = false;
         const int TIMEOUTTIME = 10;
         static bool timeToPolling = false;
         static bool toTimeoutUserBelow = false;
@@ -69,10 +70,83 @@ namespace NortagesTwitchBot
 
         public void Connect()
         {
+            TwitchClientInitialize();
+            PubSubInitialize();
+
+            //VKApiInitialize();
+            //JSONBinInitialize();
+            GoogleSheetsServiceInitialize();
+
+            //NavigateToModersPanel();
+
+            // Checks the GetViewers method
+            static void OutputResult(Task<IList<string>> task)
+            {
+                if (task.Result.Count > 0)
+                {
+                    Console.WriteLine("GetViewers works");
+                }
+                else
+                {
+                    Console.WriteLine("GetViewers doesn't work :(");
+                }
+            }
+            GetViewers(0).ContinueWith(OutputResult);
+
+            //GetChannelStats();
+        }
+
+        #region Initialization
+
+        private static void JSONBinInitialize()
+        {
             HTTPClient.DefaultRequestHeaders.Add("secret-key", TwitchInfo.JsonBinSecret);
             HTTPClient.DefaultRequestHeaders.Add("versioning", "false");
+        }
 
-            // TwitchClient
+        private static void VKApiInitialize()
+        {
+            vk_api.Authorize(new ApiAuthParams
+            {
+                AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
+            });
+        }
+
+        private static void GoogleSheetsServiceInitialize()
+        {
+            GoogleCredential credential;
+            if (File.Exists("credentials.json"))
+            {
+                // Put your credentials json file in the root of the solution and make sure copy to output dir property is set to always copy 
+                using var stream = new FileStream("credentials.json", FileMode.Open, FileAccess.Read);
+                credential = GoogleCredential.FromStream(stream).CreateScoped(scopes);
+            }
+            else
+            {
+                credential = GoogleCredential.FromJson(Environment.GetEnvironmentVariable("credentials.json")).CreateScoped(scopes);
+            }
+
+            // Create Google Sheets API service.
+            sheets_service = new SheetsService(new BaseClientService.Initializer()
+            {
+                HttpClientInitializer = credential,
+                ApplicationName = ApplicationName,
+            });
+        }
+
+        private void PubSubInitialize()
+        {
+            pubsub.OnPubSubServiceConnected += OnPubSubServiceConnected;
+            pubsub.OnListenResponse += OnListenResponse;
+            pubsub.OnRewardRedeemed += OnRewardRedeemed;
+            pubsub.OnStreamUp += OnStreamUp;
+
+            pubsub.ListenToRewards(TwitchHelpers.GetUserId(TwitchInfo.ChannelName));
+            pubsub.Connect();
+        }
+
+        private void TwitchClientInitialize()
+        {
             ConnectionCredentials credentials = new ConnectionCredentials(TwitchInfo.BotUsername, TwitchInfo.BotToken);
             var clientOptions = new ClientOptions
             {
@@ -98,62 +172,10 @@ namespace NortagesTwitchBot
             client.OnCommunitySubscription += Client_OnCommunitySubscription;
 
             client.Connect();
-
-            // PubSub
-            pubsub.OnPubSubServiceConnected += OnPubSubServiceConnected;
-            pubsub.OnListenResponse += OnListenResponse;
-            pubsub.OnRewardRedeemed += OnRewardRedeemed;
-            pubsub.OnStreamUp += OnStreamUp;
-
-            pubsub.ListenToRewards(TwitchHelpers.GetUserId(TwitchInfo.ChannelName));
-            pubsub.Connect();
-
-            GoogleCredential credential;
-            if (File.Exists("credentials.json"))
-            {
-                // Put your credentials json file in the root of the solution and make sure copy to output dir property is set to always copy 
-                using var stream = new FileStream("credentials.json", FileMode.Open, FileAccess.Read);
-                credential = GoogleCredential.FromStream(stream).CreateScoped(scopes);
-            }
-            else
-            {
-                credential = GoogleCredential.FromJson(Environment.GetEnvironmentVariable("credentials.json")).CreateScoped(scopes);
-            }
-
-            // Create Google Sheets API service.
-            sheets_service = new SheetsService(new BaseClientService.Initializer()
-            {
-                HttpClientInitializer = credential,
-                ApplicationName = ApplicationName,
-            });
-
-            // VK API
-
-            //vk_api.Authorize(new ApiAuthParams
-            //{
-            //    AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
-            //});
-
-            //NavigateToModersPanel();
-
-            // Checks the GetViewers method
-            var viewers = GetViewers(10).ContinueWith(OutputResult);
-
-            //GetChannelStats();
         }
 
-        void OutputResult(Task<IList<string>> task)
-        {
-            if (task.Result.Count > 0)
-            {
-                Console.WriteLine("GetViewers works");
-            }
-            else
-            {
-                Console.WriteLine("GetViewers doesn't work :(");
-            }
-        }
-
+        #endregion Initialization
+        
         #region TWITCH CLIENT SUBSCRIBERS
 
         private void Client_OnCommunitySubscription(object sender, OnCommunitySubscriptionArgs e)
@@ -208,7 +230,7 @@ namespace NortagesTwitchBot
 
         private async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
         {
-            if (false)
+            if (isVotesEnable)
             {
                 if (timeToPolling && (e.Command.CommandText == "ммр" || e.Command.CommandText == "mmr"))
                 {
@@ -309,7 +331,7 @@ namespace NortagesTwitchBot
             {
                 client.SendMessage(joinedChannel, "kira - лучший промокод на mycsgoo.net TakeNRG");
             }
-            else if (new string[] { "bans", "баны" }.Contains(e.Command.CommandText))
+            else if (false && new string[] { "bans", "баны" }.Contains(e.Command.CommandText))
             {
                 string output;
                 var senderUsername = e.Command.ChatMessage.DisplayName;
@@ -487,32 +509,75 @@ namespace NortagesTwitchBot
 
         private void NavigateToModersPanel()
         {
-            var archive = new ZipArchive(new MemoryStream(Resources.ChromeProfiles));
-            archive.ExtractToDirectory(".", overwriteFiles: true);
+            //var archive = new ZipArchive(new MemoryStream(Resources.ChromeProfiles));
+            //archive.ExtractToDirectory(".", overwriteFiles: true);
 
             //ZipFile.ExtractToDirectory("ChromeProfiles.zip", ".", overwriteFiles: true);
 
             var chrome_options = new ChromeOptions();
             if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
-                Console.WriteLine("USING GOOGLE_CHROME_SHIM");
-                Console.WriteLine(Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM"));
                 chrome_options.BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM");
             }
-            chrome_options.AddArgument("user-data-dir=./ChromeProfiles");
+            //chrome_options.AddArgument("user-data-dir=./ChromeProfiles");
+            //chrome_options.AddArgument("--headless");
 
             //chrome_options.AddArgument("proxy-server='direct://'");
             //chrome_options.AddArgument("proxy-bypass-list=*");
 
             driver = new ChromeDriver(chrome_options);
             driver.Navigate().GoToUrl("https://www.twitch.tv/moderator/k_i_ra");
+
+            try
+            {
+                //SignInToTwitch(driver);
+            }
+            catch (NoSuchElementException) { }
+
+            GetVerificationCode();
+        }
+
+        private void GetVerificationCode()
+        {
+            using var client = new ImapClient();
+
+            var mailServer = "imap.gmail.com";
+            int port = 993;
+            client.Connect(mailServer, port);
+
+            // Note: since we don't have an OAuth2 token, disable
+            // the XOAUTH2 authentication mechanism.
+            client.AuthenticationMechanisms.Remove("XOAUTH2");
+
+            var login = "segatron99@gmail.com";
+            var password = "Exp(i*Pi)+1=0";
+            client.Authenticate(login, password);
+
+            // The Inbox folder is always available on all IMAP servers...
+            var inbox = client.Inbox;
+            inbox.Open(FolderAccess.ReadOnly);
+            var results = inbox.Search(SearchOptions.All, SearchQuery.HasGMailLabel("twitch-verification-codes"));
+            var firstResultId = results.UniqueIds.FirstOrDefault();
+            var message = inbox.GetMessage(firstResultId);
+            //message.HtmlBody;
+
+            client.Disconnect(true);
+        }
+
+        private void SignInToTwitch(ChromeDriver driver)
+        {
+            var loginField = driver.FindElement(By.Id("login-username"), 5);
+            loginField.SendKeys(TwitchInfo.BotUsername);
+
+            var passwordField = driver.FindElement(By.Id("password-input"));
+            passwordField.SendKeys(TwitchInfo.BotPassword);
+
+            var loginButton = driver.FindElement(By.XPath("//button[@data-a-target='passport-login-button']"));
+            loginButton.Click();            
         }
 
         private static Task<IList<string>> GetViewers(int wait_seconds = 8)
         {
-            //var archive = new ZipArchive(new MemoryStream(Resources.ChromeProfiles));
-            //archive.ExtractToDirectory(".", overwriteFiles: true);
-
             // Gets the chrome driver and navigate to the stream's chat page.
             ChromeDriver driver;
             var chrome_options = new ChromeOptions();
@@ -521,18 +586,16 @@ namespace NortagesTwitchBot
                 Console.WriteLine("USING GOOGLE_CHROME_SHIM");
                 chrome_options.BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM");
             }
-            //chrome_options.AddArgument("user-data-dir=./ChromeProfiles");
 
             driver = new ChromeDriver(chrome_options);
-            CheckChromeVersion(driver);
+            //CheckChromeVersion(driver);
             driver.Navigate().GoToUrl("https://www.twitch.tv/k_i_ra/chat");
 
             // Finds the element that shows users in chat and click on it.
-            driver.FindElement(By.XPath("//button[@aria-label='Users in Chat']")).Click();
-            Thread.Sleep(TimeSpan.FromSeconds(2));
+            driver.FindElement(By.XPath("//button[@aria-label='Users in Chat']"), 5).Click();
 
             // Finds the scrollable div with chat users and scrolls through them till the end.
-            var scroll_div = driver.FindElement(By.XPath("//div[@data-test-selector='scrollable-area-wrapper']/div[@class='simplebar-scroll-content chat-viewers__scroll-container']"));
+            var scroll_div = driver.FindElement(By.XPath("//div[@data-test-selector='scrollable-area-wrapper']/div[@class='simplebar-scroll-content chat-viewers__scroll-container']"), 5);
             driver.ExecuteJavaScript(@" var prevHeight = 0;
                                         var target = arguments[0];
                                         var theInterval = setInterval(
