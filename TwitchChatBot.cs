@@ -510,8 +510,8 @@ namespace NortagesTwitchBot
 
         private static Task<IList<string>> GetViewers(int wait_seconds = 8)
         {
-            var archive = new ZipArchive(new MemoryStream(Resources.ChromeProfiles));
-            archive.ExtractToDirectory(".", overwriteFiles: true);
+            //var archive = new ZipArchive(new MemoryStream(Resources.ChromeProfiles));
+            //archive.ExtractToDirectory(".", overwriteFiles: true);
 
             // Gets the chrome driver and navigate to the stream's chat page.
             ChromeDriver driver;
@@ -521,9 +521,10 @@ namespace NortagesTwitchBot
                 Console.WriteLine("USING GOOGLE_CHROME_SHIM");
                 chrome_options.BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM");
             }
-            chrome_options.AddArgument("user-data-dir=./ChromeProfiles");
+            //chrome_options.AddArgument("user-data-dir=./ChromeProfiles");
 
             driver = new ChromeDriver(chrome_options);
+            CheckChromeVersion(driver);
             driver.Navigate().GoToUrl("https://www.twitch.tv/k_i_ra/chat");
 
             // Finds the element that shows users in chat and click on it.
@@ -575,6 +576,13 @@ namespace NortagesTwitchBot
             IList<string> viewers_nicks = viewers.Select(n => n.Text).ToList();
             driver.Quit();
             return Task.FromResult(viewers_nicks);
+        }
+
+        private static void CheckChromeVersion(ChromeDriver driver)
+        {
+            driver.Navigate().GoToUrl("chrome://version/");
+            var version = driver.FindElement(By.XPath("//table[@id='inner']//tr[1]/td[2]/span[1]"));
+            Console.WriteLine("Chrome version is " + version.Text);
         }
 
         private static void OnListenResponse(object sender, OnListenResponseArgs e)
