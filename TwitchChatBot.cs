@@ -581,7 +581,7 @@ namespace NortagesTwitchBot
         private static void CheckChromeVersion(ChromeDriver driver)
         {
             driver.Navigate().GoToUrl("chrome://version/");
-            var version = driver.FindElement(By.XPath("//table[@id='inner']//tr[1]/td[2]/span[1]"));
+            var version = driver.FindElement(By.XPath("//table[@id='inner']//tr[1]/td[2]/span[1]"), 2);
             Console.WriteLine("Chrome version is " + version.Text);
         }
 
