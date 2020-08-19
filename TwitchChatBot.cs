@@ -79,7 +79,7 @@ namespace NortagesTwitchBot
             GoogleSheetsServiceInitialize();
 
             NavigateToModersPanel();
-
+            
             // Checks the GetViewers method
             static void OutputResult(Task<IList<string>> task)
             {
@@ -553,14 +553,22 @@ namespace NortagesTwitchBot
             var results = inbox.Search(SearchOptions.All, SearchQuery.HasGMailLabel("twitch-verification-codes"));
             var firstResultId = results.UniqueIds.LastOrDefault();
             var message = inbox.GetMessage(firstResultId);
-
+            Console.WriteLine("Message date: " + message.Date);
             var path = "./verification_code.html";
             File.WriteAllText(path, message.HtmlBody);
+            Console.WriteLine("Current directory contents...");
+            foreach (var filename in Directory.EnumerateFiles("."))
+            {
+                Console.WriteLine(filename);
+            }
+
             // Opens a new tab.
             driver.ExecuteJavaScript("window.open();");
             driver.SwitchTo().Window(driver.WindowHandles.Last());
             // Opens the html-file with code.
-            driver.Navigate().GoToUrl("file:///" + Directory.GetCurrentDirectory() + path);
+            string formedUrl = "file:///" + Directory.GetCurrentDirectory() + path;
+            Console.WriteLine("Formed Url: " + formedUrl);
+            driver.Navigate().GoToUrl(formedUrl);
             // Gets that code.
             var xpath = By.XPath("/html/body/table/tbody/tr/td/center/table[2]/tbody/tr/td/table[5]/tbody/tr/th/table/tbody/tr/th/div/p");
             var code = driver.FindElement(xpath, 5).Text;
