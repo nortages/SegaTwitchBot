@@ -563,7 +563,7 @@ namespace NortagesTwitchBot
             driver.Navigate().GoToUrl("file:///" + Directory.GetCurrentDirectory() + path);
             // Gets that code.
             var xpath = By.XPath("/html/body/table/tbody/tr/td/center/table[2]/tbody/tr/td/table[5]/tbody/tr/th/table/tbody/tr/th/div/p");
-            var code = driver.FindElement(xpath).Text;
+            var code = driver.FindElement(xpath, 5).Text;
             // Closes the current tab.
             driver.ExecuteJavaScript("window.close();");
             driver.SwitchTo().Window(driver.WindowHandles.First());
@@ -591,9 +591,9 @@ namespace NortagesTwitchBot
 
             var inputs = driver.FindElements(By.XPath("//div[@data-a-target='passport-modal']//input"));
 
-            Console.WriteLine(DateTime.Now);
             Thread.Sleep(TimeSpan.FromSeconds(3));
             string code = GetVerificationCode(driver);
+            Console.WriteLine("Verification code: " + code);
 
             for (int i = 0; i < inputs.Count; i++)
             {
