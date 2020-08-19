@@ -594,8 +594,8 @@ namespace NortagesTwitchBot
             Thread.Sleep(TimeSpan.FromSeconds(2));
 
             var header = driver.FindElement(By.XPath("//h4[@data-test-selector='auth-shell-header-header']"));
-            
-            if (header == null || header.Text != "Verify login code") return;
+
+            if (header == null || header.Text != "Verify login code") Console.WriteLine("FCKNG CAPTCHA");
 
             var inputs = driver.FindElements(By.XPath("//div[@data-a-target='passport-modal']//input"));
 
