@@ -58,7 +58,7 @@ namespace NortagesTwitchBot
         ChromeDriver driver;
 
         int massGifts = 0;
-        bool isVotesEnable = false;
+        readonly bool isVotesEnable = false;
         const int TIMEOUTTIME = 10;
         static bool timeToPolling = false;
         static bool toTimeoutUserBelow = false;
@@ -78,7 +78,7 @@ namespace NortagesTwitchBot
             //JSONBinInitialize();
             GoogleSheetsServiceInitialize();
 
-            //NavigateToModersPanel();
+            NavigateToModersPanel();
 
             // Checks the GetViewers method
             static void OutputResult(Task<IList<string>> task)
@@ -92,7 +92,7 @@ namespace NortagesTwitchBot
                     Console.WriteLine("GetViewers doesn't work :(");
                 }
             }
-            GetViewers(0).ContinueWith(OutputResult);
+            //GetViewers(0).ContinueWith(OutputResult);
 
             //GetChannelStats();
         }
@@ -332,7 +332,7 @@ namespace NortagesTwitchBot
             {
                 client.SendMessage(joinedChannel, "kira - лучший промокод на mycsgoo.net TakeNRG");
             }
-            else if (false && new string[] { "bans", "баны" }.Contains(e.Command.CommandText))
+            else if (new string[] { "bans", "баны" }.Contains(e.Command.CommandText))
             {
                 string output;
                 var senderUsername = e.Command.ChatMessage.DisplayName;
@@ -529,40 +529,47 @@ namespace NortagesTwitchBot
             driver = new ChromeDriver(chrome_options);
             driver.Navigate().GoToUrl("https://www.twitch.tv/moderator/k_i_ra");
 
-            try
-            {
-                //SignInToTwitch(driver);
-            }
-            catch (NoSuchElementException) { }
-
-            GetVerificationCode();
+            SignInToTwitch(driver);
         }
 
-        private void GetVerificationCode()
+        private static string GetVerificationCode(ChromeDriver driver)
         {
-            using var client = new ImapClient();
+            using var imapClient = new ImapClient();
 
             var mailServer = "imap.gmail.com";
             int port = 993;
-            client.Connect(mailServer, port);
+            imapClient.Connect(mailServer, port);
 
             // Note: since we don't have an OAuth2 token, disable
             // the XOAUTH2 authentication mechanism.
-            client.AuthenticationMechanisms.Remove("XOAUTH2");
+            imapClient.AuthenticationMechanisms.Remove("XOAUTH2");
 
-            var login = "segatron99@gmail.com";
-            var password = "Exp(i*Pi)+1=0";
-            client.Authenticate(login, password);
+            var login = TwitchInfo.GmailEmail;
+            var password = TwitchInfo.GmailPassword;
+            imapClient.Authenticate(login, password);
 
-            // The Inbox folder is always available on all IMAP servers...
-            var inbox = client.Inbox;
+            var inbox = imapClient.Inbox;
             inbox.Open(FolderAccess.ReadOnly);
             var results = inbox.Search(SearchOptions.All, SearchQuery.HasGMailLabel("twitch-verification-codes"));
-            var firstResultId = results.UniqueIds.FirstOrDefault();
+            var firstResultId = results.UniqueIds.LastOrDefault();
             var message = inbox.GetMessage(firstResultId);
-            //message.HtmlBody;
 
-            client.Disconnect(true);
+            var path = "./verification_code.html";
+            File.WriteAllText(path, message.HtmlBody);
+            // Opens a new tab.
+            driver.ExecuteJavaScript("window.open();");
+            driver.SwitchTo().Window(driver.WindowHandles.Last());
+            // Opens the html-file with code.
+            driver.Navigate().GoToUrl("file:///" + Directory.GetCurrentDirectory() + path);
+            // Gets that code.
+            var xpath = By.XPath("/html/body/table/tbody/tr/td/center/table[2]/tbody/tr/td/table[5]/tbody/tr/th/table/tbody/tr/th/div/p");
+            var code = driver.FindElement(xpath).Text;
+            // Closes the current tab.
+            driver.ExecuteJavaScript("window.close();");
+            driver.SwitchTo().Window(driver.WindowHandles.First());
+
+            imapClient.Disconnect(true);
+            return code;
         }
 
         private void SignInToTwitch(ChromeDriver driver)
@@ -574,7 +581,24 @@ namespace NortagesTwitchBot
             passwordField.SendKeys(TwitchInfo.BotPassword);
 
             var loginButton = driver.FindElement(By.XPath("//button[@data-a-target='passport-login-button']"));
-            loginButton.Click();            
+            loginButton.Click();
+
+            Thread.Sleep(TimeSpan.FromSeconds(2));
+
+            var header = driver.FindElement(By.XPath("//h4[@data-test-selector='auth-shell-header-header']"));
+            
+            if (header == null || header.Text != "Verify login code") return;
+
+            var inputs = driver.FindElements(By.XPath("//div[@data-a-target='passport-modal']//input"));
+
+            Console.WriteLine(DateTime.Now);
+            Thread.Sleep(TimeSpan.FromSeconds(3));
+            string code = GetVerificationCode(driver);
+
+            for (int i = 0; i < inputs.Count; i++)
+            {
+                inputs[i].SendKeys(code[i].ToString());
+            }
         }
 
         private static Task<IList<string>> GetViewers(int wait_seconds = 8)
@@ -589,14 +613,29 @@ namespace NortagesTwitchBot
             }
 
             driver = new ChromeDriver(chrome_options);
-            //CheckChromeVersion(driver);
+
             driver.Navigate().GoToUrl("https://www.twitch.tv/k_i_ra/chat");
+            //driver.Navigate().GoToUrl("https://www.twitch.tv/dinablin/chat");
 
             // Finds the element that shows users in chat and click on it.
             driver.FindElement(By.XPath("//button[@aria-label='Users in Chat']"), 5).Click();
 
             // Finds the scrollable div with chat users and scrolls through them till the end.
-            var scroll_div = driver.FindElement(By.XPath("//div[@data-test-selector='scrollable-area-wrapper']/div[@class='simplebar-scroll-content chat-viewers__scroll-container']"), 5);
+            var by = By.XPath("//div[@data-test-selector='scrollable-area-wrapper']/div[@class='simplebar-scroll-content chat-viewers__scroll-container']");
+            var scroll_div = driver.FindElement(by, 5);
+
+            //var newWait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+            //var scroll_div = newWait.Until(ExpectedConditions.ElementToBeClickable(by));
+            //scroll_div.Click();
+
+            //var prevHeight = 0;
+            //while (prevHeight != scroll_div.Size.Height)
+            //{
+            //    prevHeight = scroll_div.Size.Height;
+            //    scroll_div.SendKeys(Keys.End);
+            //    Thread.Sleep(TimeSpan.FromSeconds(2));
+            //}
+
             driver.ExecuteJavaScript(@" var prevHeight = 0;
                                         var target = arguments[0];
                                         var theInterval = setInterval(
@@ -607,7 +646,9 @@ namespace NortagesTwitchBot
                                             }
                                             else { clearInterval(theInterval); }
                                         }, 500);", scroll_div);
+
             // Time can be found if get the current viewers count on the stream page.
+
             Thread.Sleep(TimeSpan.FromSeconds(wait_seconds));
 
             var wait2 = new WebDriverWait(driver, TimeSpan.FromSeconds(10));

@@ -7,7 +7,7 @@ namespace NortagesTwitchBot
 {
     public static class WebDriverExtensions
     {
-        public static IWebElement FindElement(this ISearchContext context, By by, uint timeout, bool displayed = false)
+        public static IWebElement FindElement(this ISearchContext context, By by, uint timeout, bool displayed = false, bool sendKeys = false)
         {
             var wait = new DefaultWait<ISearchContext>(context)
             {
@@ -20,9 +20,23 @@ namespace NortagesTwitchBot
                 return wait.Until(ctx =>
                 {
                     var elem = ctx.FindElements(by).FirstOrDefault();
-                    if (displayed && !elem.Displayed)
-                        return null;
-
+                    if (elem != null)
+                    {
+                        if (displayed && !elem.Displayed)
+                            return null;
+                        if (sendKeys)
+                        {
+                            try
+                            {
+                                elem.SendKeys(Keys.Up);
+                            }
+                            catch (ElementNotInteractableException)
+                            {
+                                return null;
+                            }
+                        }
+                    }
+                    
                     return elem;
                 });
             }
