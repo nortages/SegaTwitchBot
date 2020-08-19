@@ -556,17 +556,12 @@ namespace NortagesTwitchBot
             Console.WriteLine("Message date: " + message.Date);
             var path = "./verification_code.html";
             File.WriteAllText(path, message.HtmlBody);
-            Console.WriteLine("Current directory contents...");
-            foreach (var filename in Directory.EnumerateFiles("."))
-            {
-                Console.WriteLine(filename);
-            }
 
             // Opens a new tab.
             driver.ExecuteJavaScript("window.open();");
             driver.SwitchTo().Window(driver.WindowHandles.Last());
             // Opens the html-file with code.
-            string formedUrl = "file:///" + Directory.GetCurrentDirectory() + path;
+            string formedUrl = "file:///" + Directory.GetCurrentDirectory() + path.TrimStart('.');
             Console.WriteLine("Formed Url: " + formedUrl);
             driver.Navigate().GoToUrl(formedUrl);
             // Gets that code.
