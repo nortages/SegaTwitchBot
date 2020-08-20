@@ -55,8 +55,8 @@ namespace NortagesTwitchBot
         static readonly RegexOptions regexOptions = RegexOptions.Compiled | RegexOptions.IgnoreCase;
         static readonly Regex regex_botsPlusToChat = new Regex(@".*?Боты?,? \+ в ча[тй].*", regexOptions);
         static readonly Regex regex_hiToBot = new Regex(@".+?NortagesBot.+?(Привет|Здравствуй|Даров|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|Q{1,2}).*", regexOptions);
-        static readonly Regex regex_botCheck = new Regex(@"@NortagesBot ([Жив|Живой|Тут|Здесь])\?", regexOptions);
-        static readonly Regex regex_botLox = new Regex(@"@NortagesBot [kupaLox|лох]", regexOptions);
+        static readonly Regex regex_botCheck = new Regex(@"@NortagesBot (Жив|Живой|Тут|Здесь)\?", regexOptions);
+        static readonly Regex regex_botLox = new Regex(@"@NortagesBot (kupaLox|лох)", regexOptions);
 
         public static void Connect()
         {
