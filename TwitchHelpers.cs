@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 
 using TwitchLib.Api;
-using TwitchLib.Api.Core.Interfaces;
-using TwitchLib.Api.Helix;
-using TwitchLib.Api.Helix.Models.Streams;
+using TwitchLib.Api.Core.Models.Undocumented.Chatters;
+using TwitchLib.Api.Core.Models.Undocumented.RecentMessages;
 using TwitchLib.Api.Helix.Models.Users;
+using TwitchLib.Api.ThirdParty.UsernameChange;
 using TwitchLib.Api.V5.Models.Channels;
 
 namespace NortagesTwitchBot
@@ -56,7 +56,7 @@ namespace NortagesTwitchBot
             return users[0];
         }
 
-        public static User[] GetUsers(List<string> userNames)
+        public static User[] GetUsersAsync(List<string> userNames)
         {
             if (userNames.Count == 0)
                 return null;
@@ -95,10 +95,20 @@ namespace NortagesTwitchBot
                 {
                     userNames.Add(sub.UserName);
                 }
-                return GetUsers(userNames);
+                return GetUsersAsync(userNames);
             }
 
             return null;
+        }
+
+        public static List<UsernameChangeListing> GetUsernameChangesAsync(string userName)
+        {
+            return twitchAPI.ThirdParty.UsernameChange.GetUsernameChangesAsync(userName).Result;
+        }
+
+        public static List<ChatterFormatted> GetChatters(string channelName)
+        {
+            return twitchAPI.Undocumented.GetChattersAsync(channelName).Result;
         }
     }
 }

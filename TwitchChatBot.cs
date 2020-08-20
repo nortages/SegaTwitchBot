@@ -32,27 +32,32 @@ using OpenQA.Selenium.Support.Extensions;
 using MailKit.Net.Imap;
 using MailKit;
 using MailKit.Search;
+using System.Runtime.CompilerServices;
+using System.Threading.Channels;
+using System.Reflection;
 
 namespace NortagesTwitchBot
 {
     public static class TwitchChatBot
     {
         public static TwitchClient client;
+        public static SheetsService sheetsService;
         static readonly TwitchPubSub pubsub = new TwitchPubSub();
         static readonly JoinedChannel joinedChannel = new JoinedChannel(TwitchInfo.ChannelName);
         static readonly HttpClient HTTPClient = new HttpClient();
         static readonly VkApi vkApi = new VkApi();
         static readonly Random rand = new Random();
-        public static SheetsService sheetsService;
 
         static ChromeDriver driver;
 
         static int massGifts = 0;
         const int TIMEOUTTIME = 10;
         static bool toTimeoutUserBelow = false;
+        static (bool isHitBySnowball, string userName) hitBySnowballData = (false, null);
         static readonly HashSet<string> usersWithShield = new HashSet<string>();
 
         static readonly RegexOptions regexOptions = RegexOptions.Compiled | RegexOptions.IgnoreCase;
+        static readonly Regex regex_trimEndFromQuyaBot = new Regex(@"\[\d\]", regexOptions);
         static readonly Regex regex_botsPlusToChat = new Regex(@".*?Боты?,? \+ в ча[тй].*", regexOptions);
         static readonly Regex regex_hiToBot = new Regex(@".+?NortagesBot.+?(Привет|Здравствуй|Даров|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|Q{1,2}).*", regexOptions);
         static readonly Regex regex_botCheck = new Regex(@"@NortagesBot (Жив|Живой|Тут|Здесь)\?", regexOptions);
@@ -67,23 +72,17 @@ namespace NortagesTwitchBot
             //JSONBinInitialize();
             GoogleSheetsServiceInitialize();
 
-            NavigateToModersPanel();
-            
-            // Checks the GetViewers method
-            static void OutputResult(Task<IList<string>> task)
+            if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
-                if (task.Result.Count > 0)
-                {
-                    Console.WriteLine("GetViewers works");
-                }
-                else
-                {
-                    Console.WriteLine("GetViewers doesn't work :(");
-                }
+                NavigateToModersPanel(); 
             }
-            //GetViewers(0).ContinueWith(OutputResult);
 
-            //GetChannelStats();
+            //var test = TwitchHelpers.GetUsernameChangesAsync("akabacon_Lapki");
+            //foreach (var item in test)
+            //{
+            //    Console.WriteLine(item.UsernameOld + " ->" + item.UsernameNew);
+            //}
+            //client.SendMessage("K_i_ra", $"!снежок @segatron99k");
         }
 
         #region Initialization
@@ -183,6 +182,13 @@ namespace NortagesTwitchBot
             {
                 Commands.BansCommand(e);
             }
+            else if (e.Command.CommandText == "снежок" &&
+                     e.Command.ArgumentsAsString.TrimStart('@') == TwitchInfo.BotUsername)
+            {
+                Console.WriteLine("Someone just throw a snowball to the bot!");
+                hitBySnowballData.isHitBySnowball = true;
+                hitBySnowballData.userName = e.Command.ChatMessage.DisplayName;
+            }
             #region Currently not used
             else if (new string[] { "mmr", "ммр" }.Contains(e.Command.CommandText))
             {
@@ -200,11 +206,11 @@ namespace NortagesTwitchBot
             {
                 await Commands.StopVotingCommand(e);
             }
-            else if (e.Command.CommandText == "показатьрезультат" && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
+            else if (new string[] { "showresult", "показать результат" }.Contains(e.Command.CommandText) && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
             {
                 await Commands.ShowResult(e);
             }
-            #endregion currently not used
+            #endregion Currently not used
         }
 
         private static void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
@@ -225,23 +231,76 @@ namespace NortagesTwitchBot
             }
 
             // Regexes
-            if (regex_botsPlusToChat.Match(e.ChatMessage.Message).Success)
+            if (regex_botsPlusToChat.IsMatch(e.ChatMessage.Message))
             {
                 client.SendMessage(joinedChannel, "+");
             }
-            else if (regex_hiToBot.Match(e.ChatMessage.Message).Success)
+            else if (regex_hiToBot.IsMatch(e.ChatMessage.Message))
             {
                 client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} Приветствую MrDestructoid");
             }
-            else if (regex_botCheck.Match(e.ChatMessage.Message).Success)
+            else if (regex_botCheck.IsMatch(e.ChatMessage.Message))
             {
                 var answer = regex_botCheck.Match(e.ChatMessage.Message).Groups[1].Value;
                 client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} {answer}.");
             }
-            else if (regex_botLox.Match(e.ChatMessage.Message).Success)
+            else if (regex_botLox.IsMatch(e.ChatMessage.Message))
             {
                 client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} сам лох");
             }
+            else if (hitBySnowballData.isHitBySnowball && e.ChatMessage.DisplayName == "QuyaBot")
+            {
+                hitBySnowballData.isHitBySnowball = false;
+                var message = e.ChatMessage.Message;
+                message = regex_trimEndFromQuyaBot.Replace(message, "");
+                var snowballSender = hitBySnowballData.userName;
+                var commandCooldown = TimeSpan.FromSeconds(15);
+                var messageCooldown = TimeSpan.FromSeconds(5);
+                if (message == $"Снежок прилетает прямо в {TwitchInfo.BotUsername}, а {snowballSender}, задорно хохоча, скрывается с места преступления!")
+                {
+                    client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " та за шо?(", messageCooldown);
+                }
+                else if (message == $"Снежок, запущенный {snowballSender} по невероятной траектории, попадает по жо... попадает ниже спины {TwitchInfo.BotUsername}.")
+                {
+                    client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " ах ты... ну, погоди! Kappa", messageCooldown);
+                    client.SendMessageWithDelay(e.ChatMessage.Channel, $"!снежок @{snowballSender}", commandCooldown);
+                }
+                else if (message == $"{snowballSender} хватает камень и кидает его в {TwitchInfo.BotUsername}. Ты вообще адекватен? Так делать нельзя!")
+                {
+                    client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " ай! Вообще-то, очень больно было BibleThump", messageCooldown);
+                }
+                else if (message == $"{snowballSender} коварно подкрадывается со снежком к {TwitchInfo.BotUsername} и засовывет пригорошню снега прямо за шиворот! Такой подлости никто не ждал!")
+                {
+                    client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " Твою ж... Холодно-то как... Ну, ладно! Ща тоже снега попробуешь KappaClaus", messageCooldown);
+                    client.SendMessageWithDelay(e.ChatMessage.Channel, $"!снежок @{snowballSender}", commandCooldown);
+                }
+                else if (message == $"{snowballSender} кидается с кулаками на {TwitchInfo.BotUsername}. Кажется ему никто не объяснил правил!")
+                {
+                    client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " ты чего дерёшься?? SMOrc", messageCooldown);
+                }
+                else if (message == $"Видимо {snowballSender} имеет небольшое косоглазие, потому что не попадает снежком в {TwitchInfo.BotUsername}!")
+                {
+                    client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " ха, мазила! PepeLaugh", messageCooldown);
+                }
+                else if (message == $"{snowballSender} метко попадает снежком в лицо {TwitchInfo.BotUsername}. Ну что, вкусный снег в этом году?")
+                {
+                    client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " *Пфу-пфу* Микросхемы мне корпус, ты что творишь??", messageCooldown);
+                    client.SendMessageWithDelay(e.ChatMessage.Channel, $"!снежок @{snowballSender}", commandCooldown);
+                }
+                else if (message == $"{snowballSender} пытается кинуть снежок, но неклюже поскальзывается и падает прямо в сугроб. Видимо, сегодня неудачный день!")
+                {
+                    client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " KEKW", messageCooldown);
+                }
+                else if (message == $"{snowballSender} кидает снежок, но {TwitchInfo.BotUsername} мастерстки ловит его на лету и кидает в обратную сторону! Нет, ну вы это видели?")
+                {
+                    client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " не в этот раз EZY", messageCooldown);
+                }
+            }
+        }
+
+        private static void SendMessageWithDelay(this TwitchClient client, string channel, string message, TimeSpan delay)
+        {
+            Task.Delay(delay).ContinueWith(t => client.SendMessage(channel, message));
         }
 
         private static void Client_OnCommunitySubscription(object sender, OnCommunitySubscriptionArgs e)
@@ -281,7 +340,7 @@ namespace NortagesTwitchBot
 
         private static void Client_OnReSubscriber(object sender, OnReSubscriberArgs e)
         {
-            client.SendMessage(joinedChannel, $"{e.ReSubscriber.DisplayName}, спасибо за обновление подписки! Poooound");
+            client.SendMessage(joinedChannel, $"{e.ReSubscriber.DisplayName}, спасибо за продление подписки! Poooound");
         }
 
         private static void Client_OnNewSubscriber(object sender, OnNewSubscriberArgs e)
@@ -373,18 +432,18 @@ namespace NortagesTwitchBot
 
         #endregion PUBSUB SUBSCRIBERS
 
-        private static async void FindAnonymousGifter()
+        private static void FindAnonymousGifter()
         {
             const string spreadsheetId_Anon = "1IoXknFKw-f_FmMrxB9-ni5wgSg5JFCJSt0Gq06m1KEM";
 
-            var viewers = await GetViewers();
+            var chatters = TwitchHelpers.GetChatters(joinedChannel.Channel).Select(n => n.Username);
                         
             var response = sheetsService.Spreadsheets.Values.Get(spreadsheetId_Anon, "A:A").Execute();
             var old_records = response.Values;
             var old_viewers = old_records != null ? old_records.Select(n => n.First().ToString()).ToList() : new List<string>();
 
             var upd_values = new List<IList<object>>();
-            var viewers_intersection = old_viewers.Count != 0 ? viewers.Intersect(old_viewers) : viewers;
+            var viewers_intersection = old_viewers.Count != 0 ? chatters.Intersect(old_viewers) : chatters;
             foreach (var viewer in viewers_intersection)
             {
                 upd_values.Add(new List<object> { viewer });
