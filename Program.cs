@@ -7,8 +7,7 @@ namespace NortagesTwitchBot
     {
         static void Main(string[] args)
         {
-            TwitchChatBot bot = new TwitchChatBot();
-            bot.Connect();
+            TwitchChatBot.Connect();
 
             Thread.Sleep(-1);
         }        

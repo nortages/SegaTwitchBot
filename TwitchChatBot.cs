@@ -1,7 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Net;
-using System.Text;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
@@ -18,8 +16,6 @@ using TwitchLib.PubSub.Events;
 using TwitchLib.Communication.Events;
 using TwitchLib.Communication.Models;
 using TwitchLib.Communication.Clients;
-
-using Newtonsoft.Json;
 
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
@@ -39,37 +35,30 @@ using MailKit.Search;
 
 namespace NortagesTwitchBot
 {
-    class TwitchChatBot
+    public static class TwitchChatBot
     {
-        static TwitchClient client;
+        public static TwitchClient client;
         static readonly TwitchPubSub pubsub = new TwitchPubSub();
         static readonly JoinedChannel joinedChannel = new JoinedChannel(TwitchInfo.ChannelName);
         static readonly HttpClient HTTPClient = new HttpClient();
-        static readonly VkApi vk_api = new VkApi();
+        static readonly VkApi vkApi = new VkApi();
         static readonly Random rand = new Random();
+        public static SheetsService sheetsService;
 
-        static readonly string ApplicationName = "Google Sheets API .NET Quickstart";
-        static SheetsService sheets_service;
-        static readonly string[] scopes = { SheetsService.Scope.Spreadsheets };
-        const string linkToHOF = "https://docs.google.com/spreadsheets/d/19RwGl1i79-3ZuVYyytfyvsg_wVprvozMSyooAy3HaU8";
-        const string spreadsheetId_HOF = "19RwGl1i79-3ZuVYyytfyvsg_wVprvozMSyooAy3HaU8";
-        const string spreadsheetId_Anon = "1IoXknFKw-f_FmMrxB9-ni5wgSg5JFCJSt0Gq06m1KEM";
+        static ChromeDriver driver;
 
-        ChromeDriver driver;
-
-        int massGifts = 0;
-        readonly bool isVotesEnable = false;
+        static int massGifts = 0;
         const int TIMEOUTTIME = 10;
-        static bool timeToPolling = false;
         static bool toTimeoutUserBelow = false;
-        static Dictionary<string, int> votes;
         static readonly HashSet<string> usersWithShield = new HashSet<string>();
-        static readonly Regex regex_botsPlusToChat = new Regex(@".*?[Бб]оты?,? \+ в ча[тй].*", RegexOptions.Compiled);
-        static readonly Regex regex_hiToBot = new Regex(@".+?NortagesBot.+?([Пп]ривет|[Зз]дравствуй|[Дд]аров|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|[Qq]{1,2}).*", RegexOptions.Compiled);
-        static readonly Regex regex_botCheck = new Regex(@"@NortagesBot [Жж]ив\?", RegexOptions.Compiled);
-        static readonly Regex regex_botLox = new Regex(@"@NortagesBot [kupaLox|лох|Лох]", RegexOptions.Compiled);
 
-        public void Connect()
+        static readonly RegexOptions regexOptions = RegexOptions.Compiled | RegexOptions.IgnoreCase;
+        static readonly Regex regex_botsPlusToChat = new Regex(@".*?Боты?,? \+ в ча[тй].*", regexOptions);
+        static readonly Regex regex_hiToBot = new Regex(@".+?NortagesBot.+?(Привет|Здравствуй|Даров|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|Q{1,2}).*", regexOptions);
+        static readonly Regex regex_botCheck = new Regex(@"@NortagesBot ([Жив|Живой|Тут|Здесь])\?", regexOptions);
+        static readonly Regex regex_botLox = new Regex(@"@NortagesBot [kupaLox|лох]", regexOptions);
+
+        public static void Connect()
         {
             TwitchClientInitialize();
             PubSubInitialize();
@@ -107,7 +96,7 @@ namespace NortagesTwitchBot
 
         private static void VKApiInitialize()
         {
-            vk_api.Authorize(new ApiAuthParams
+            vkApi.Authorize(new ApiAuthParams
             {
                 AccessToken = "43a54afd43a54afd43a54afd0043d79f00443a543a54afd1d5f2479d149db02ebfef170"
             });
@@ -116,6 +105,7 @@ namespace NortagesTwitchBot
         private static void GoogleSheetsServiceInitialize()
         {
             GoogleCredential credential;
+            string[] scopes = { SheetsService.Scope.Spreadsheets };
             if (File.Exists("credentials.json"))
             {
                 // Put your credentials json file in the root of the solution and make sure copy to output dir property is set to always copy 
@@ -128,25 +118,25 @@ namespace NortagesTwitchBot
             }
 
             // Create Google Sheets API service.
-            sheets_service = new SheetsService(new BaseClientService.Initializer()
+            sheetsService = new SheetsService(new BaseClientService.Initializer()
             {
                 HttpClientInitializer = credential,
-                ApplicationName = ApplicationName,
+                ApplicationName = "ApplicationName",
             });
         }
 
-        private void PubSubInitialize()
+        private static void PubSubInitialize()
         {
-            pubsub.OnPubSubServiceConnected += OnPubSubServiceConnected;
-            pubsub.OnListenResponse += OnListenResponse;
-            pubsub.OnRewardRedeemed += OnRewardRedeemed;
-            pubsub.OnStreamUp += OnStreamUp;
+            pubsub.OnPubSubServiceConnected += PubSub_OnPubSubServiceConnected;
+            pubsub.OnListenResponse += PubSub_OnListenResponse;
+            pubsub.OnRewardRedeemed += PubSub_OnRewardRedeemed;
+            pubsub.OnStreamUp += PubSub_OnStreamUp;
 
             pubsub.ListenToRewards(TwitchHelpers.GetUserId(TwitchInfo.ChannelName));
             pubsub.Connect();
         }
 
-        private void TwitchClientInitialize()
+        private static void TwitchClientInitialize()
         {
             ConnectionCredentials credentials = new ConnectionCredentials(TwitchInfo.BotUsername, TwitchInfo.BotToken);
             var clientOptions = new ClientOptions
@@ -176,10 +166,85 @@ namespace NortagesTwitchBot
         }
 
         #endregion Initialization
-        
+
         #region TWITCH CLIENT SUBSCRIBERS
 
-        private void Client_OnCommunitySubscription(object sender, OnCommunitySubscriptionArgs e)
+        private static async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
+        {
+            if (new string[] { "song", "music", "песня", "музыка" }.Contains(e.Command.CommandText))
+            {
+                Commands.SongCommand(e);
+            }
+            else if (e.Command.CommandText == "промокод")
+            {
+                client.SendMessage(joinedChannel, "kira - лучший промокод на mycsgoo.net TakeNRG");
+            }
+            else if (new string[] { "bans", "баны" }.Contains(e.Command.CommandText))
+            {
+                Commands.BansCommand(e);
+            }
+            #region Currently not used
+            else if (new string[] { "mmr", "ммр" }.Contains(e.Command.CommandText))
+            {
+                Commands.MmrCommand(e);
+            }
+            else if (new string[] { "hof", "залславы" }.Contains(e.Command.CommandText))
+            {
+                Commands.HallOfFameCommand(e);
+            }
+            else if (new string[] { "startvoting", "начатьголосование" }.Contains(e.Command.CommandText) && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
+            {
+                Commands.StartVotingCommand(e);
+            }
+            else if (new string[] { "stopvoting", "закончитьголосование" }.Contains(e.Command.CommandText) && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
+            {
+                await Commands.StopVotingCommand(e);
+            }
+            else if (e.Command.CommandText == "показатьрезультат" && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
+            {
+                await Commands.ShowResult(e);
+            }
+            #endregion currently not used
+        }
+
+        private static void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
+        {
+            if (toTimeoutUserBelow && !e.ChatMessage.IsModerator && !e.ChatMessage.IsBroadcaster)
+            {
+                if (usersWithShield.Contains(e.ChatMessage.DisplayName))
+                {
+                    Console.WriteLine($"{e.ChatMessage.DisplayName} lose a shield!");
+                    client.SendMessage(joinedChannel, $"@{e.ChatMessage.DisplayName}, Твой бабл лопнул CurseLit Теперь будь осторожнее Keepo");
+                    usersWithShield.Remove(e.ChatMessage.DisplayName);
+                    return;
+                }
+                client.TimeoutUser(joinedChannel, e.ChatMessage.DisplayName, TimeSpan.FromMinutes(TIMEOUTTIME));
+                toTimeoutUserBelow = false;
+                Console.WriteLine($"{e.ChatMessage.DisplayName} is banned on {TIMEOUTTIME} minutes!");
+                return;
+            }
+
+            // Regexes
+            if (regex_botsPlusToChat.Match(e.ChatMessage.Message).Success)
+            {
+                client.SendMessage(joinedChannel, "+");
+            }
+            else if (regex_hiToBot.Match(e.ChatMessage.Message).Success)
+            {
+                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} Приветствую MrDestructoid");
+            }
+            else if (regex_botCheck.Match(e.ChatMessage.Message).Success)
+            {
+                var answer = regex_botCheck.Match(e.ChatMessage.Message).Groups[1].Value;
+                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} {answer}.");
+            }
+            else if (regex_botLox.Match(e.ChatMessage.Message).Success)
+            {
+                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} сам лох");
+            }
+        }
+
+        private static void Client_OnCommunitySubscription(object sender, OnCommunitySubscriptionArgs e)
         {
             massGifts = e.GiftedSubscription.MsgParamMassGiftCount;
             if (e.GiftedSubscription.MsgParamMassGiftCount == 1)
@@ -197,7 +262,7 @@ namespace NortagesTwitchBot
             }
         }
 
-        private void Client_OnGiftedSubscription(object sender, OnGiftedSubscriptionArgs e)
+        private static void Client_OnGiftedSubscription(object sender, OnGiftedSubscriptionArgs e)
         {
             if (massGifts > 0)
             {
@@ -214,208 +279,44 @@ namespace NortagesTwitchBot
             }
         }
 
-        private void Client_OnReSubscriber(object sender, OnReSubscriberArgs e)
+        private static void Client_OnReSubscriber(object sender, OnReSubscriberArgs e)
         {
             client.SendMessage(joinedChannel, $"{e.ReSubscriber.DisplayName}, спасибо за обновление подписки! Poooound");
         }
 
-        private void Client_OnNewSubscriber(object sender, OnNewSubscriberArgs e)
+        private static void Client_OnNewSubscriber(object sender, OnNewSubscriberArgs e)
         {
             client.SendMessage(joinedChannel, $"{e.Subscriber.DisplayName}, спасибо за подписку! bleedPurple Давайте сюда Ваш паспорт FBCatch");
         }
 
-        private void Client_OnError(object sender, OnErrorEventArgs e)
-        {
-            Console.WriteLine($"ERROR: {e.Exception.Message}\n{e.Exception.StackTrace}");
-        }
 
-        private async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
-        {
-            if (isVotesEnable)
-            {
-                if (timeToPolling && (e.Command.CommandText == "ммр" || e.Command.CommandText == "mmr"))
-                {
-                    if (int.TryParse(e.Command.ArgumentsAsString, out int vote))
-                    {
-                        votes[e.Command.ChatMessage.DisplayName] = vote;
-                        Console.WriteLine($"{e.Command.ChatMessage.DisplayName} votes for {vote}");
-                    }
-                }
-                else if (e.Command.CommandText == "залславы")
-                {
-                    var winners = GetHallOfFame();
-                    if (e.Command.ArgumentsAsString == "фулл")
-                    {
-                        var msg = "Полный список лучших ванг стрима этого месяца Pog\n";
-                        client.SendMessage(joinedChannel, msg + linkToHOF);
-                    }
-                    else
-                    {
-                        var msg = "Топ-3 ванг стрима Pog\n";
-                        int i = 0;
-                        foreach (var winner in winners)
-                        {
-                            msg += $"{winner.Key} - {winner.Value}; ";
-                            if (i == 3) break;
-                            i++;
-                        }
-                        msg = msg.Remove(msg.Length - 2, 2) + ".";
-                        client.SendMessage(joinedChannel, msg);
-                    }
-                }
-                else if (e.Command.CommandText == "начатьголосование" && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
-                {
-                    timeToPolling = true;
-                    votes = new Dictionary<string, int>();
-                    client.SendMessage(joinedChannel, "Голосование началось! TwitchVotes Пишите !ммр и свою ставку. Под конец стрима будет определён победитель, удачи! TakeNRG");
-                    Console.WriteLine("Polling just started!");
-                }
-                else if (timeToPolling && e.Command.CommandText == "закончитьголосование" && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
-                {
-                    timeToPolling = false;
-                    var bin_id = "5ede5401655d87580c463af7";
-                    var url = $"https://api.jsonbin.io/b/{bin_id}";
-                    var content = new StringContent(
-                      JsonConvert.SerializeObject(votes),
-                      Encoding.UTF8,
-                      "application/json"
-                      );
-                    var response = await HTTPClient.PutAsync(url, content);
-
-                    if (response.StatusCode != HttpStatusCode.OK)
-                    {
-                        Console.WriteLine("Smth went wrong...");
-                        Console.WriteLine(response.StatusCode);
-                        Console.WriteLine(response.ReasonPhrase);
-                    }
-
-                    Console.WriteLine("Polling just closed!");
-                    client.SendMessage(joinedChannel, "Голосование закончилось! FBtouchdown Ожидайте конца стрима, чтобы узнать результат TwitchLit");
-                }
-                else if (e.Command.CommandText == "показатьрезультат" && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
-                {
-                    if (int.TryParse(e.Command.ArgumentsAsString, out int result))
-                    {
-                        Console.WriteLine($"The result is {result}");
-
-                        var bin_id = "5ede5401655d87580c463af7";
-                        var url = $"https://api.jsonbin.io/b/{bin_id}";
-
-                        var response = await HTTPClient.GetAsync(url);
-                        if (response.StatusCode == HttpStatusCode.OK)
-                        {
-                            var votes = JsonConvert.DeserializeObject<Dictionary<string, int>>(await response.Content.ReadAsStringAsync());
-                            string winner = votes.OrderBy(item => Math.Abs(result - item.Value)).First().Key;
-                            client.SendMessage(joinedChannel, $"PorscheWIN Победитель - {winner}. Его ставка - {votes[winner]}. Поздравляем! EZY Clap");
-                            UpdateHallOfFame(winner);
-                            Console.WriteLine($"The winner is {winner}! His bet was {votes[winner]}");
-                        }
-                        else
-                        {
-                            Console.WriteLine("Smth went wrong...");
-                            Console.WriteLine(response.ReasonPhrase);
-                        }
-                    }
-                }
-            }
-            
-            else if (new string[] { "song", "music", "песня", "музыка" }.Contains(e.Command.CommandText))
-            {
-                //var group = vk_api.Groups.GetByIdAsync(null, "120235040", GroupsFields.Status).Result.FirstOrDefault();
-                //var result = group.StatusAudio != null ? $"{group.StatusAudio.Artist} - {group.StatusAudio.Title}" : "Сейчас у стримера в вк ничего не играет :(";
-                //Console.WriteLine("Current song: " + result);
-                //client.SendMessage(joinedChannel, result);
-                var prefix = string.IsNullOrEmpty(e.Command.ArgumentsAsString) ? "" : e.Command.ArgumentsAsString + ", ";
-                client.SendMessage(joinedChannel, $"{prefix}Все песни, кроме тех, что с ютуба, транслируются у стримера в группе вк, заходи GivePLZ https://vk.com/k_i_ra_group TakeNRG");
-            }
-            else if (e.Command.CommandText == "промокод")
-            {
-                client.SendMessage(joinedChannel, "kira - лучший промокод на mycsgoo.net TakeNRG");
-            }
-            else if (new string[] { "bans", "баны" }.Contains(e.Command.CommandText))
-            {
-                string output;
-                var senderUsername = e.Command.ChatMessage.DisplayName;
-                try
-                {
-                    if (string.IsNullOrEmpty(e.Command.ArgumentsAsString))
-                    {
-                        (string timeouts, string bans) = GetChannelStats(senderUsername);
-                        output = $"@{senderUsername}, you have {timeouts} timeouts and {bans} bans.";
-                    }
-                    else
-                    {
-                        var userName = e.Command.ArgumentsAsString.TrimStart('@');
-                        (string timeouts, string bans) = GetChannelStats(userName);
-                        output = $"@{senderUsername}, the user {userName} has {timeouts} timeouts and {bans} bans.";
-                    }
-                }
-                catch (NoSuchElementException)
-                {
-                    output = $"@{senderUsername}, the user {e.Command.ArgumentsAsString} isn't present on the stream now.";
-                }
-
-                client.SendMessage(joinedChannel, output);
-                Console.WriteLine(output);
-            }
-        }
-
-        private void Client_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
+        private static void Client_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
         {
             Console.WriteLine($"{e.DateTime}: {e.BotUsername} - {e.Data}");
             // TODO: Once in a while save logs to a file
         }
 
-        private void Client_OnConnected(object sender, OnConnectedArgs e)
-        {
-            Console.WriteLine($"Connected to {e.AutoJoinChannel}");
-        }
-
-        private void Client_OnJoinedChannel(object sender, OnJoinedChannelArgs e)
+        private static void Client_OnJoinedChannel(object sender, OnJoinedChannelArgs e)
         {
             Console.WriteLine("Hey guys! I am a bot connected via TwitchLib!");
         }
 
-        private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
+        private static void Client_OnConnected(object sender, OnConnectedArgs e)
         {
-            if (toTimeoutUserBelow && !e.ChatMessage.IsModerator && !e.ChatMessage.IsBroadcaster)
-            {
-                if (usersWithShield.Contains(e.ChatMessage.DisplayName))
-                {
-                    Console.WriteLine($"{e.ChatMessage.DisplayName} lose a shield!");
-                    client.SendMessage(joinedChannel, $"@{e.ChatMessage.DisplayName}, Твой бабл лопнул CurseLit Теперь будь осторожнее Keepo");
-                    usersWithShield.Remove(e.ChatMessage.DisplayName);
-                    return;
-                }
-                client.TimeoutUser(joinedChannel, e.ChatMessage.DisplayName, TimeSpan.FromMinutes(TIMEOUTTIME));                
-                toTimeoutUserBelow = false;
-                Console.WriteLine($"{e.ChatMessage.DisplayName} is banned on {TIMEOUTTIME} minutes!");
-                return;
-            }
-            if (regex_botsPlusToChat.Matches(e.ChatMessage.Message).Count > 0)
-            {
-                client.SendMessage(joinedChannel, "+");
-            }
-            else if (regex_hiToBot.Matches(e.ChatMessage.Message).Count > 0)
-            {
-                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} Приветствую MrDestructoid");
-            }
-            else if (regex_botCheck.Matches(e.ChatMessage.Message).Count > 0)
-            {
-                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} жив.");
-            }
-            else if (regex_botLox.Matches(e.ChatMessage.Message).Count > 0)
-            {
-                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} сам лох");
-            }
+            Console.WriteLine($"Connected to {e.AutoJoinChannel}");
         }
 
-        private void Client_OnConnectionError(object sender, OnConnectionErrorArgs e)
+        private static void Client_OnError(object sender, OnErrorEventArgs e)
+        {
+            Console.WriteLine($"ERROR: {e.Exception.Message}\n{e.Exception.StackTrace}");
+        }
+
+        private static void Client_OnConnectionError(object sender, OnConnectionErrorArgs e)
         {
             Console.WriteLine(e.Error);
         }
 
-        private void Client_OnDisconnected(object sender, OnDisconnectedEventArgs e)
+        private static void Client_OnDisconnected(object sender, OnDisconnectedEventArgs e)
         {
             Disconnect();
         }
@@ -424,13 +325,13 @@ namespace NortagesTwitchBot
 
         #region PUBSUB SUBSCRIBERS
 
-        private void OnStreamUp(object sender, OnStreamUpArgs e)
+        private static void PubSub_OnStreamUp(object sender, OnStreamUpArgs e)
         {
             client.SendMessage(joinedChannel, "Привет всем и хорошего стрима!");
             Console.WriteLine("The stream just has started");
         }
 
-        private static void OnRewardRedeemed(object sender, OnRewardRedeemedArgs e)
+        private static void PubSub_OnRewardRedeemed(object sender, OnRewardRedeemedArgs e)
         {
             if (e.Status == "UNFULFILLED") {
                 Console.WriteLine("\nSomeone redeemed a reward!");
@@ -454,7 +355,7 @@ namespace NortagesTwitchBot
             }            
         }
 
-        private static void OnPubSubServiceConnected(object sender, EventArgs e)
+        private static void PubSub_OnPubSubServiceConnected(object sender, EventArgs e)
         {
             // SendTopics accepts an oauth optionally, which is necessary for some topics
             Console.WriteLine("PubSub Service is Connected");
@@ -462,11 +363,23 @@ namespace NortagesTwitchBot
             pubsub.SendTopics(TwitchInfo.BotToken);
         }
 
+        private static void PubSub_OnListenResponse(object sender, OnListenResponseArgs e)
+        {
+            if (e.Successful)
+                Console.WriteLine($"Successfully verified listening to topic: {e.Topic}");
+            else
+                Console.WriteLine($"Failed to listen! Error: {e.Response.Error}");
+        }
+
+        #endregion PUBSUB SUBSCRIBERS
+
         private static async void FindAnonymousGifter()
         {
+            const string spreadsheetId_Anon = "1IoXknFKw-f_FmMrxB9-ni5wgSg5JFCJSt0Gq06m1KEM";
+
             var viewers = await GetViewers();
                         
-            var response = sheets_service.Spreadsheets.Values.Get(spreadsheetId_Anon, "A:A").Execute();
+            var response = sheetsService.Spreadsheets.Values.Get(spreadsheetId_Anon, "A:A").Execute();
             var old_records = response.Values;
             var old_viewers = old_records != null ? old_records.Select(n => n.First().ToString()).ToList() : new List<string>();
 
@@ -478,130 +391,10 @@ namespace NortagesTwitchBot
             }
 
             ValueRange body = new ValueRange { Values = upd_values };            
-            sheets_service.Spreadsheets.Values.Clear(new ClearValuesRequest(), spreadsheetId_Anon, "A:A").Execute();
-            var upd_request = sheets_service.Spreadsheets.Values.Update(body, spreadsheetId_Anon, "A1");
+            sheetsService.Spreadsheets.Values.Clear(new ClearValuesRequest(), spreadsheetId_Anon, "A:A").Execute();
+            var upd_request = sheetsService.Spreadsheets.Values.Update(body, spreadsheetId_Anon, "A1");
             upd_request.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
             upd_request.Execute();
-        }
-
-        #endregion PUBSUB SUBSCRIBERS
-
-        #region CUSTOM
-
-        private (string timeouts, string bans) GetChannelStats(string userName)
-        {
-            var inputElement = driver.FindElement(By.XPath("//input[@name='viewers-filter']"), 10);
-            inputElement.Clear();
-            inputElement.SendKeys(userName);
-           
-            var userElement = driver.FindElement(By.XPath($"//p[text()='{userName.ToLower()}']"), 5);
-            userElement.Click();
-            var infoPanel = driver.FindElement(By.XPath("//div[@data-test-selector='viewer-card-mod-drawer']"), 2);
-            var panelElements = infoPanel.FindElements(By.XPath(".//div[@data-test-selector='viewer-card-mod-drawer-tab']"));
-            
-            var xpath = ".//p[contains(@class, 'tw-c-text-link')]";
-            var timeouts = panelElements[1].FindElement(By.XPath(xpath), 3).Text;
-            var bans = panelElements[2].FindElement(By.XPath(xpath), 3).Text;
-
-            driver.FindElement(By.XPath("//button[@data-a-target='user-details-close']")).Click();
-
-            return (timeouts, bans);
-        }
-
-        private void NavigateToModersPanel()
-        {
-            //var archive = new ZipArchive(new MemoryStream(Resources.ChromeProfiles));
-            //archive.ExtractToDirectory(".", overwriteFiles: true);
-
-            //ZipFile.ExtractToDirectory("ChromeProfiles.zip", ".", overwriteFiles: true);
-
-            var chrome_options = new ChromeOptions();
-            if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
-            {
-                chrome_options.BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM");
-            }
-            //chrome_options.AddArgument("user-data-dir=./ChromeProfiles");
-            //chrome_options.AddArgument("--headless");
-
-            //chrome_options.AddArgument("proxy-server='direct://'");
-            //chrome_options.AddArgument("proxy-bypass-list=*");
-
-            driver = new ChromeDriver(chrome_options);
-            driver.Navigate().GoToUrl("https://www.twitch.tv/moderator/k_i_ra");
-
-            SignInToTwitch(driver);
-        }
-
-        private static string GetVerificationCode(ChromeDriver driver)
-        {
-            using var imapClient = new ImapClient();
-
-            var mailServer = "imap.gmail.com";
-            int port = 993;
-            imapClient.Connect(mailServer, port);
-
-            // Note: since we don't have an OAuth2 token, disable
-            // the XOAUTH2 authentication mechanism.
-            imapClient.AuthenticationMechanisms.Remove("XOAUTH2");
-
-            var login = TwitchInfo.GmailEmail;
-            var password = TwitchInfo.GmailPassword;
-            imapClient.Authenticate(login, password);
-
-            var inbox = imapClient.Inbox;
-            inbox.Open(FolderAccess.ReadOnly);
-            var results = inbox.Search(SearchOptions.All, SearchQuery.HasGMailLabel("twitch-verification-codes"));
-            var firstResultId = results.UniqueIds.LastOrDefault();
-            var message = inbox.GetMessage(firstResultId);
-            Console.WriteLine("Message date: " + message.Date);
-            var path = "./verification_code.html";
-            File.WriteAllText(path, message.HtmlBody);
-
-            // Opens a new tab.
-            driver.ExecuteJavaScript("window.open();");
-            driver.SwitchTo().Window(driver.WindowHandles.Last());
-            // Opens the html-file with code.
-            string formedUrl = "file:///" + Directory.GetCurrentDirectory() + path.TrimStart('.');
-            Console.WriteLine("Formed Url: " + formedUrl);
-            driver.Navigate().GoToUrl(formedUrl);
-            // Gets that code.
-            var xpath = By.XPath("/html/body/table/tbody/tr/td/center/table[2]/tbody/tr/td/table[5]/tbody/tr/th/table/tbody/tr/th/div/p");
-            var code = driver.FindElement(xpath, 5).Text;
-            // Closes the current tab.
-            driver.ExecuteJavaScript("window.close();");
-            driver.SwitchTo().Window(driver.WindowHandles.First());
-
-            imapClient.Disconnect(true);
-            return code;
-        }
-
-        private void SignInToTwitch(ChromeDriver driver)
-        {
-            var loginField = driver.FindElement(By.Id("login-username"), 5);
-            loginField.SendKeys(TwitchInfo.BotUsername);
-
-            var passwordField = driver.FindElement(By.Id("password-input"));
-            passwordField.SendKeys(TwitchInfo.BotPassword);
-
-            var loginButton = driver.FindElement(By.XPath("//button[@data-a-target='passport-login-button']"));
-            loginButton.Click();
-
-            Thread.Sleep(TimeSpan.FromSeconds(2));
-
-            var header = driver.FindElement(By.XPath("//h4[@data-test-selector='auth-shell-header-header']"));
-
-            if (header == null || header.Text != "Verify login code") Console.WriteLine("FCKNG CAPTCHA");
-
-            var inputs = driver.FindElements(By.XPath("//div[@data-a-target='passport-modal']//input"));
-
-            Thread.Sleep(TimeSpan.FromSeconds(3));
-            string code = GetVerificationCode(driver);
-            Console.WriteLine("Verification code: " + code);
-
-            for (int i = 0; i < inputs.Count; i++)
-            {
-                inputs[i].SendKeys(code[i].ToString());
-            }
         }
 
         private static Task<IList<string>> GetViewers(int wait_seconds = 8)
@@ -686,72 +479,90 @@ namespace NortagesTwitchBot
             return Task.FromResult(viewers_nicks);
         }
 
-        private static void CheckChromeVersion(ChromeDriver driver)
+        private static void NavigateToModersPanel()
         {
-            driver.Navigate().GoToUrl("chrome://version/");
-            var version = driver.FindElement(By.XPath("//table[@id='inner']//tr[1]/td[2]/span[1]"), 2);
-            Console.WriteLine("Chrome version is " + version.Text);
+            var chrome_options = new ChromeOptions();
+            if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
+            {
+                chrome_options.BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM");
+            }
+            driver = new ChromeDriver(chrome_options);
+            Commands.driver = driver;
+            driver.Navigate().GoToUrl("https://www.twitch.tv/moderator/k_i_ra");
+
+            SignInToTwitch(driver);
         }
 
-        private static void OnListenResponse(object sender, OnListenResponseArgs e)
+        private static void SignInToTwitch(ChromeDriver driver)
         {
-            if (e.Successful)
-                Console.WriteLine($"Successfully verified listening to topic: {e.Topic}");
-            else
-                Console.WriteLine($"Failed to listen! Error: {e.Response.Error}");
-        }
+            var loginField = driver.FindElement(By.Id("login-username"), 5);
+            loginField.SendKeys(TwitchInfo.BotUsername);
 
-        Dictionary<string, int> GetHallOfFame()
-        {
-            string rangeToRead = "HallOfFame!A2:B";
-            var request = sheets_service.Spreadsheets.Values.Get(spreadsheetId_HOF, rangeToRead);
+            var passwordField = driver.FindElement(By.Id("password-input"));
+            passwordField.SendKeys(TwitchInfo.BotPassword);
 
-            ValueRange response = request.Execute();
-            var values = response.Values;
+            var loginButton = driver.FindElement(By.XPath("//button[@data-a-target='passport-login-button']"));
+            loginButton.Click();
 
-            if (values != null && values.Count > 0)
+            Thread.Sleep(TimeSpan.FromSeconds(2));
+
+            var header = driver.FindElement(By.XPath("//h4[@data-test-selector='auth-shell-header-header']"));
+
+            if (header == null || header.Text != "Verify login code") Console.WriteLine("FCKNG CAPTCHA");
+
+            var inputs = driver.FindElements(By.XPath("//div[@data-a-target='passport-modal']//input"));
+
+            Thread.Sleep(TimeSpan.FromSeconds(3));
+            string code = GetVerificationCode(driver);
+            Console.WriteLine("Verification code: " + code);
+
+            for (int i = 0; i < inputs.Count; i++)
             {
-                Dictionary<string, int> d = new Dictionary<string, int>();
-                foreach (var row in values)
-                {
-                    d.Add(row[0].ToString(), Convert.ToInt32(row[1]));
-                }
-                return d;
-            }
-            else
-            {
-                Console.WriteLine("No data found.");
-                return new Dictionary<string, int>();
+                inputs[i].SendKeys(code[i].ToString());
             }
         }
 
-        void UpdateHallOfFame(string winner)
+        private static string GetVerificationCode(ChromeDriver driver)
         {
-            string rangeToWrite = "HallOfFame!A2";
+            using var imapClient = new ImapClient();
 
-            var d = GetHallOfFame();
+            var mailServer = "imap.gmail.com";
+            int port = 993;
+            imapClient.Connect(mailServer, port);
 
-            var key_name = winner;
-            if (!d.ContainsKey(key_name))
-            {
-                d.Add(key_name, 0);
-            }
-            d[key_name]++;
+            // Note: since we don't have an OAuth2 token, disable
+            // the XOAUTH2 authentication mechanism.
+            imapClient.AuthenticationMechanisms.Remove("XOAUTH2");
 
-            var upd_values = new List<IList<object>>();
+            var login = TwitchInfo.GmailEmail;
+            var password = TwitchInfo.GmailPassword;
+            imapClient.Authenticate(login, password);
 
-            foreach (var item in d.OrderByDescending(key => key.Value))
-            {
-                upd_values.Add(new List<object> { item.Key, item.Value });
-            }
+            var inbox = imapClient.Inbox;
+            inbox.Open(FolderAccess.ReadOnly);
+            var results = inbox.Search(SearchOptions.All, SearchQuery.HasGMailLabel("twitch-verification-codes"));
+            var firstResultId = results.UniqueIds.LastOrDefault();
+            var message = inbox.GetMessage(firstResultId);
+            Console.WriteLine("Message date: " + message.Date);
+            var path = "./verification_code.html";
+            File.WriteAllText(path, message.HtmlBody);
 
-            ValueRange body = new ValueRange { Values = upd_values };
-            var upd_request = sheets_service.Spreadsheets.Values.Update(body, spreadsheetId_HOF, rangeToWrite);
-            upd_request.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
-            upd_request.Execute();
+            driver.OpenNewTab();
+            // Opens the html-file with code.
+            string formedUrl = "file:///" + Directory.GetCurrentDirectory() + path.TrimStart('.');
+            Console.WriteLine("Formed Url: " + formedUrl);
+            driver.Navigate().GoToUrl(formedUrl);
+            // Gets that code.
+            var xpath = By.XPath("/html/body/table/tbody/tr/td/center/table[2]/tbody/tr/td/table[5]/tbody/tr/th/table/tbody/tr/th/div/p");
+            var code = driver.FindElement(xpath, 5).Text;
+            // Closes the current tab.
+            driver.CloseCurrentTab();
+
+            imapClient.Disconnect(true);
+            return code;
         }
 
-        private void Disconnect()
+        private static void Disconnect()
         {
             Console.WriteLine("Disconnecting...");
             //client.SendMessage(joinedChannel, "The plug has been pulled. My time is up. Until next time. ResidentSleeper");
@@ -762,7 +573,5 @@ namespace NortagesTwitchBot
             pubsub.Disconnect();
             //client.Disconnect();
         }
-
-        #endregion CUSTOM
     }
 }

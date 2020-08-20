@@ -1,4 +1,5 @@
 ﻿using OpenQA.Selenium;
+using OpenQA.Selenium.Support.Extensions;
 using OpenQA.Selenium.Support.UI;
 using System;
 using System.Linq;
@@ -7,7 +8,19 @@ namespace NortagesTwitchBot
 {
     public static class WebDriverExtensions
     {
-        public static IWebElement FindElement(this ISearchContext context, By by, uint timeout, bool displayed = false, bool sendKeys = false)
+        public static void OpenNewTab(this IWebDriver webDriver)
+        {
+            webDriver.ExecuteJavaScript("window.open();");
+            webDriver.SwitchTo().Window(webDriver.WindowHandles.Last());
+        }
+
+        public static void CloseCurrentTab(this IWebDriver webDriver)
+        {
+            webDriver.ExecuteJavaScript("window.close();");
+            webDriver.SwitchTo().Window(webDriver.WindowHandles.Last());
+        }
+
+        public static IWebElement FindElement(this ISearchContext context, By by, uint timeout, bool displayed = false)
         {
             var wait = new DefaultWait<ISearchContext>(context)
             {
@@ -24,19 +37,7 @@ namespace NortagesTwitchBot
                     {
                         if (displayed && !elem.Displayed)
                             return null;
-                        if (sendKeys)
-                        {
-                            try
-                            {
-                                elem.SendKeys(Keys.Up);
-                            }
-                            catch (ElementNotInteractableException)
-                            {
-                                return null;
-                            }
-                        }
-                    }
-                    
+                    }                    
                     return elem;
                 });
             }
