@@ -32,9 +32,6 @@ using OpenQA.Selenium.Support.Extensions;
 using MailKit.Net.Imap;
 using MailKit;
 using MailKit.Search;
-using System.Runtime.CompilerServices;
-using System.Threading.Channels;
-using System.Reflection;
 
 namespace NortagesTwitchBot
 {
@@ -62,6 +59,7 @@ namespace NortagesTwitchBot
         static readonly Regex regex_hiToBot = new Regex(@".+?NortagesBot.+?(Привет|Здравствуй|Даров|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|Q{1,2}).*", regexOptions);
         static readonly Regex regex_botCheck = new Regex(@"@NortagesBot (Жив|Живой|Тут|Здесь)\?", regexOptions);
         static readonly Regex regex_botLox = new Regex(@"@NortagesBot (kupaLox|лох)", regexOptions);
+        static readonly Regex regex_botWorryStick = new Regex(@"@NortagesBot( worryStick)+", regexOptions);
 
         public static void Connect()
         {
@@ -76,13 +74,6 @@ namespace NortagesTwitchBot
             {
                 NavigateToModersPanel(); 
             }
-
-            //var test = TwitchHelpers.GetUsernameChangesAsync("akabacon_Lapki");
-            //foreach (var item in test)
-            //{
-            //    Console.WriteLine(item.UsernameOld + " ->" + item.UsernameNew);
-            //}
-            //client.SendMessage("K_i_ra", $"!снежок @segatron99k");
         }
 
         #region Initialization
@@ -132,6 +123,7 @@ namespace NortagesTwitchBot
             pubsub.OnStreamUp += PubSub_OnStreamUp;
 
             pubsub.ListenToRewards(TwitchHelpers.GetUserId(TwitchInfo.ChannelName));
+            pubsub.ListenToVideoPlayback(joinedChannel.Channel);
             pubsub.Connect();
         }
 
@@ -247,6 +239,10 @@ namespace NortagesTwitchBot
             else if (regex_botLox.IsMatch(e.ChatMessage.Message))
             {
                 client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} сам лох");
+            }
+            else if (regex_botWorryStick.IsMatch(e.ChatMessage.Message))
+            {
+                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} KEKWait");
             }
             else if (hitBySnowballData.isHitBySnowball && e.ChatMessage.DisplayName == "QuyaBot")
             {
@@ -386,7 +382,7 @@ namespace NortagesTwitchBot
 
         private static void PubSub_OnStreamUp(object sender, OnStreamUpArgs e)
         {
-            client.SendMessage(joinedChannel, "Привет всем и хорошего стрима!");
+            client.SendMessage(joinedChannel, "Привет всем и хорошего стрима! peepoLove");
             Console.WriteLine("The stream just has started");
         }
 
