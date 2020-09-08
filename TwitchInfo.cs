@@ -7,8 +7,6 @@ namespace NortagesTwitchBot
 {
     static class TwitchInfo
     {
-        //private static IConfiguration _configuration;
-
         static TwitchInfo()
         {            
             string pathToConfig = "config.json";

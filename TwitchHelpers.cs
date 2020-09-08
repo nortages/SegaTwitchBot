@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 
 using TwitchLib.Api;
+using TwitchLib.Api.Core.Interfaces;
 using TwitchLib.Api.Core.Models.Undocumented.Chatters;
 using TwitchLib.Api.Core.Models.Undocumented.RecentMessages;
 using TwitchLib.Api.Helix.Models.Users;

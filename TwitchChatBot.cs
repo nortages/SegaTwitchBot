@@ -32,6 +32,7 @@ using OpenQA.Selenium.Support.Extensions;
 using MailKit.Net.Imap;
 using MailKit;
 using MailKit.Search;
+using Microsoft.Extensions.Logging;
 
 namespace NortagesTwitchBot
 {
@@ -121,10 +122,22 @@ namespace NortagesTwitchBot
             pubsub.OnListenResponse += PubSub_OnListenResponse;
             pubsub.OnRewardRedeemed += PubSub_OnRewardRedeemed;
             pubsub.OnStreamUp += PubSub_OnStreamUp;
+            pubsub.OnPubSubServiceClosed += Pubsub_OnPubSubServiceClosed;
+            pubsub.OnPubSubServiceError += Pubsub_OnPubSubServiceError;
 
             pubsub.ListenToRewards(TwitchHelpers.GetUserId(TwitchInfo.ChannelName));
             pubsub.ListenToVideoPlayback(joinedChannel.Channel);
             pubsub.Connect();
+        }
+
+        private static void Pubsub_OnPubSubServiceError(object sender, OnPubSubServiceErrorArgs e)
+        {
+            Console.WriteLine("[PUBSUB_ERROR] " + e.Exception.Message);
+        }
+
+        private static void Pubsub_OnPubSubServiceClosed(object sender, EventArgs e)
+        {
+            Console.WriteLine("[PUBSUB_CLOSED]");
         }
 
         private static void TwitchClientInitialize()
@@ -134,7 +147,7 @@ namespace NortagesTwitchBot
             {
                 MessagesAllowedInPeriod = 100,
                 ThrottlingPeriod = TimeSpan.FromSeconds(30),
-                SendDelay = 1
+                SendDelay = 1,
             };
             WebSocketClient customClient = new WebSocketClient(clientOptions);
             client = new TwitchClient(customClient);
