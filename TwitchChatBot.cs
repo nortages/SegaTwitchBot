@@ -251,7 +251,7 @@ namespace NortagesTwitchBot
             }
             else if (regex_botLox.IsMatch(e.ChatMessage.Message))
             {
-                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} сам {regex_botLox.Match(e.ChatMessage.Message).Value}");
+                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} сам {regex_botLox.Match(e.ChatMessage.Message).Groups[1].Value}");
             }
             else if (regex_botWorryStick.IsMatch(e.ChatMessage.Message))
             {
