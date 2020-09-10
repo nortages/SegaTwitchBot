@@ -71,12 +71,12 @@ namespace NortagesTwitchBot
             //JSONBinInitialize();
             GoogleSheetsServiceInitialize();
 
-            if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
+            if (false && Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
                 NavigateToModersPanel(); 
             }
         }
-
+    
         #region Initialization
 
         private static void JSONBinInitialize()
@@ -185,7 +185,7 @@ namespace NortagesTwitchBot
             }
             else if (new string[] { "bans", "баны" }.Contains(e.Command.CommandText))
             {
-                Commands.BansCommand(e);
+                //Commands.BansCommand(e);
             }
             else if (e.Command.CommandText == "снежок" &&
                      e.Command.ArgumentsAsString.TrimStart('@') == TwitchInfo.BotUsername)
@@ -251,7 +251,7 @@ namespace NortagesTwitchBot
             }
             else if (regex_botLox.IsMatch(e.ChatMessage.Message))
             {
-                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} сам лох");
+                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} сам {regex_botLox.Match(e.ChatMessage.Message).Value}");
             }
             else if (regex_botWorryStick.IsMatch(e.ChatMessage.Message))
             {
@@ -265,33 +265,34 @@ namespace NortagesTwitchBot
                 var snowballSender = hitBySnowballData.userName;
                 var commandCooldown = TimeSpan.FromSeconds(15);
                 var messageCooldown = TimeSpan.FromSeconds(5);
-                if (message == $"Снежок прилетает прямо в {TwitchInfo.BotUsername}, а {snowballSender}, задорно хохоча, скрывается с места преступления!")
+                var botUsername = TwitchInfo.BotUsername.ToLower();
+                if (message == $"Снежок прилетает прямо в {botUsername}, а {snowballSender}, задорно хохоча, скрывается с места преступления!")
                 {
                     client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " та за шо?(", messageCooldown);
                 }
-                else if (message == $"Снежок, запущенный {snowballSender} по невероятной траектории, попадает по жо... попадает ниже спины {TwitchInfo.BotUsername}.")
+                else if (message == $"Снежок, запущенный {snowballSender} по невероятной траектории, попадает по жо... попадает ниже спины {botUsername}.")
                 {
                     client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " ах ты... ну, погоди! Kappa", messageCooldown);
                     client.SendMessageWithDelay(e.ChatMessage.Channel, $"!снежок @{snowballSender}", commandCooldown);
                 }
-                else if (message == $"{snowballSender} хватает камень и кидает его в {TwitchInfo.BotUsername}. Ты вообще адекватен? Так делать нельзя!")
+                else if (message == $"{snowballSender} хватает камень и кидает его в {botUsername}. Ты вообще адекватен? Так делать нельзя!")
                 {
                     client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " ай! Вообще-то, очень больно было BibleThump", messageCooldown);
                 }
-                else if (message == $"{snowballSender} коварно подкрадывается со снежком к {TwitchInfo.BotUsername} и засовывет пригорошню снега прямо за шиворот! Такой подлости никто не ждал!")
+                else if (message == $"{snowballSender} коварно подкрадывается со снежком к {botUsername} и засовывет пригорошню снега прямо за шиворот! Такой подлости никто не ждал!")
                 {
                     client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " Твою ж... Холодно-то как... Ну, ладно! Ща тоже снега попробуешь KappaClaus", messageCooldown);
                     client.SendMessageWithDelay(e.ChatMessage.Channel, $"!снежок @{snowballSender}", commandCooldown);
                 }
-                else if (message == $"{snowballSender} кидается с кулаками на {TwitchInfo.BotUsername}. Кажется ему никто не объяснил правил!")
+                else if (message == $"{snowballSender} кидается с кулаками на {botUsername}. Кажется ему никто не объяснил правил!")
                 {
                     client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " ты чего дерёшься?? SMOrc", messageCooldown);
                 }
-                else if (message == $"Видимо {snowballSender} имеет небольшое косоглазие, потому что не попадает снежком в {TwitchInfo.BotUsername}!")
+                else if (message == $"Видимо {snowballSender} имеет небольшое косоглазие, потому что не попадает снежком в {botUsername}!")
                 {
                     client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " ха, мазила! PepeLaugh", messageCooldown);
                 }
-                else if (message == $"{snowballSender} метко попадает снежком в лицо {TwitchInfo.BotUsername}. Ну что, вкусный снег в этом году?")
+                else if (message == $"{snowballSender} метко попадает снежком в лицо {botUsername}. Ну что, вкусный снег в этом году?")
                 {
                     client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " *Пфу-пфу* Микросхемы мне корпус, ты что творишь??", messageCooldown);
                     client.SendMessageWithDelay(e.ChatMessage.Channel, $"!снежок @{snowballSender}", commandCooldown);
@@ -300,7 +301,7 @@ namespace NortagesTwitchBot
                 {
                     client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " KEKW", messageCooldown);
                 }
-                else if (message == $"{snowballSender} кидает снежок, но {TwitchInfo.BotUsername} мастерстки ловит его на лету и кидает в обратную сторону! Нет, ну вы это видели?")
+                else if (message == $"{snowballSender} кидает снежок, но {botUsername} мастерстки ловит его на лету и кидает в обратную сторону! Нет, ну вы это видели?")
                 {
                     client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " не в этот раз EZY", messageCooldown);
                 }
@@ -354,7 +355,7 @@ namespace NortagesTwitchBot
 
         private static void Client_OnNewSubscriber(object sender, OnNewSubscriberArgs e)
         {
-            client.SendMessage(joinedChannel, $"{e.Subscriber.DisplayName}, спасибо за подписку! bleedPurple Давайте сюда Ваш паспорт FBCatch");
+            client.SendMessage(joinedChannel, $"{e.Subscriber.DisplayName}, спасибо за подписку! bleedPurple Давайте сюда Ваш паспорт FBCatch kupaPasport");
         }
 
 
