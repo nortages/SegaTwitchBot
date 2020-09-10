@@ -61,6 +61,7 @@ namespace NortagesTwitchBot
         static readonly Regex regex_botCheck = new Regex(@"@NortagesBot (Жив|Живой|Тут|Здесь)\?", regexOptions);
         static readonly Regex regex_botLox = new Regex(@"@NortagesBot (kupaLox|лох)", regexOptions);
         static readonly Regex regex_botWorryStick = new Regex(@"@NortagesBot( worryStick)+", regexOptions);
+        static readonly Regex regex_banUser = new Regex(@"/ban (\w+)", regexOptions);
 
         public static void Connect()
         {
@@ -256,6 +257,11 @@ namespace NortagesTwitchBot
             else if (regex_botWorryStick.IsMatch(e.ChatMessage.Message))
             {
                 client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} KEKWait");
+            }
+            else if (regex_banUser.IsMatch(e.ChatMessage.Message))
+            {
+                var userToBan = regex_banUser.Match(e.ChatMessage.Message).Groups[1].Value;
+                client.SendMessage(joinedChannel, $"Пользователь {userToBan} был забанен.");
             }
             else if (hitBySnowballData.isHitBySnowball && e.ChatMessage.DisplayName == "QuyaBot")
             {
