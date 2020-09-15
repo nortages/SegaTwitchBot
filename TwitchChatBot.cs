@@ -50,7 +50,7 @@ namespace NortagesTwitchBot
 
         static int massGifts = 0;
         const int TIMEOUTTIME = 10;
-        static bool toTimeoutUserBelow = false;
+        static (bool flag, int num) timeoutUserBelowData = (false, 0);
         static (bool isHitBySnowball, string userName) hitBySnowballData = (false, null);
         static readonly HashSet<string> usersWithShield = new HashSet<string>();
 
@@ -61,7 +61,6 @@ namespace NortagesTwitchBot
         static readonly Regex regex_botCheck = new Regex(@"@NortagesBot (Жив|Живой|Тут|Здесь)\?", regexOptions);
         static readonly Regex regex_botLox = new Regex(@"@NortagesBot (kupaLox|лох)", regexOptions);
         static readonly Regex regex_botWorryStick = new Regex(@"@NortagesBot( worryStick)+", regexOptions);
-        static readonly Regex regex_banUser = new Regex(@"/ban (\w+)", regexOptions);
 
         public static void Connect()
         {
@@ -216,12 +215,17 @@ namespace NortagesTwitchBot
             {
                 await Commands.ShowResult(e);
             }
+            else if (e.Command.CommandText == "ban")
+            {
+                var userToBan = e.Command.ArgumentsAsString.TrimStart('@');
+                client.SendMessage(joinedChannel, $"Пользователь {userToBan} был забанен.");
+            }
             #endregion Currently not used
         }
 
         private static void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
-            if (toTimeoutUserBelow && !e.ChatMessage.IsModerator && !e.ChatMessage.IsBroadcaster)
+            if (timeoutUserBelowData.flag && !e.ChatMessage.IsModerator && !e.ChatMessage.IsBroadcaster)
             {
                 if (usersWithShield.Contains(e.ChatMessage.DisplayName))
                 {
@@ -230,8 +234,9 @@ namespace NortagesTwitchBot
                     usersWithShield.Remove(e.ChatMessage.DisplayName);
                     return;
                 }
-                client.TimeoutUser(joinedChannel, e.ChatMessage.DisplayName, TimeSpan.FromMinutes(TIMEOUTTIME));
-                toTimeoutUserBelow = false;
+                client.TimeoutUser(joinedChannel, e.ChatMessage.DisplayName, TimeSpan.FromMinutes(TIMEOUTTIME * timeoutUserBelowData.num));
+                timeoutUserBelowData.flag = false;
+                timeoutUserBelowData.num = 0;
                 Console.WriteLine($"{e.ChatMessage.DisplayName} is banned on {TIMEOUTTIME} minutes!");
                 return;
             }
@@ -257,11 +262,6 @@ namespace NortagesTwitchBot
             else if (regex_botWorryStick.IsMatch(e.ChatMessage.Message))
             {
                 client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} KEKWait");
-            }
-            else if (regex_banUser.IsMatch(e.ChatMessage.Message))
-            {
-                var userToBan = regex_banUser.Match(e.ChatMessage.Message).Groups[1].Value;
-                client.SendMessage(joinedChannel, $"Пользователь {userToBan} был забанен.");
             }
             else if (hitBySnowballData.isHitBySnowball && e.ChatMessage.DisplayName == "QuyaBot")
             {
@@ -420,7 +420,8 @@ namespace NortagesTwitchBot
                 }
                 else if (e.RewardTitle.Contains("Таймач человеку снизу"))
                 {
-                    toTimeoutUserBelow = true;
+                    timeoutUserBelowData.flag = true;
+                    timeoutUserBelowData.num++;
                 }
                 else if (false && e.RewardTitle.Contains(rewardTestName))
                 {
