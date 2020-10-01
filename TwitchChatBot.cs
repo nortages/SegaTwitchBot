@@ -147,7 +147,7 @@ namespace NortagesTwitchBot
 
         private static void TwitchClientInitialize()
         {
-            ConnectionCredentials credentials = new ConnectionCredentials(TwitchInfo.BotUsername, TwitchInfo.BotToken);
+            ConnectionCredentials credentials = new ConnectionCredentials(TwitchInfo.BotUsername, TwitchInfo.BotToken, "wss://irc-ws.chat.fdgt.tv:433");
             var clientOptions = new ClientOptions
             {
                 MessagesAllowedInPeriod = 100,
@@ -268,9 +268,36 @@ namespace NortagesTwitchBot
             {
                 client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} KEKWait");
             }
-            else if (GTAcodes.ContainsKey(e.ChatMessage.Message.ToUpper()))
+            else if (GTAcodes.ContainsKey(e.ChatMessage.Message.ToUpper().Split()[0]))
             {
-                client.SendMessage(joinedChannel, string.Format(GTAcodes[e.ChatMessage.Message.ToUpper()], e.ChatMessage.Username));
+                var args = e.ChatMessage.Message.Split();
+                string arg = null;
+                if (args.Length > 1) arg = args[1];
+
+                if (GTAcodes[args[0].ToUpper()].Contains("{1}"))
+                {
+                    if (arg != null)
+                    {
+                        client.SendMessage(joinedChannel, string.Format(GTAcodes[args[0].ToUpper()], e.ChatMessage.Username, arg));
+                    }
+                    else
+                    {
+                        var chatters = TwitchHelpers.GetChatters(e.ChatMessage.Channel);
+                        arg = chatters[rand.Next(0, chatters.Count - 1)].Username;
+                        client.SendMessage(joinedChannel, string.Format(GTAcodes[args[0].ToUpper()], e.ChatMessage.Username, arg));
+                    }
+                }
+                else
+                {
+                    if (arg != null)
+                    {
+                        client.SendMessage(joinedChannel, string.Format(GTAcodes[args[0].ToUpper()], arg));
+                    }
+                    else
+                    {
+                        client.SendMessage(joinedChannel, string.Format(GTAcodes[args[0].ToUpper()], e.ChatMessage.Username));
+                    }
+                }
             }
             else if (hitBySnowballData.isHitBySnowball && e.ChatMessage.DisplayName == "QuyaBot")
             {
