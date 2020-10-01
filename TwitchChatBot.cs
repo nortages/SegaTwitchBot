@@ -33,6 +33,7 @@ using MailKit.Net.Imap;
 using MailKit;
 using MailKit.Search;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace NortagesTwitchBot
 {
@@ -61,6 +62,8 @@ namespace NortagesTwitchBot
         static readonly Regex regex_botCheck = new Regex(@"@NortagesBot (Жив|Живой|Тут|Здесь)\?", regexOptions);
         static readonly Regex regex_botLox = new Regex(@"@NortagesBot (kupaLox|лох)", regexOptions);
         static readonly Regex regex_botWorryStick = new Regex(@"@NortagesBot( worryStick)+", regexOptions);
+
+        static readonly Dictionary<string, string> GTAcodes = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("gta_codes.json"));
 
         public static void Connect()
         {
@@ -262,6 +265,10 @@ namespace NortagesTwitchBot
             else if (regex_botWorryStick.IsMatch(e.ChatMessage.Message))
             {
                 client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} KEKWait");
+            }
+            else if (GTAcodes.ContainsKey(e.ChatMessage.Message.ToUpper()))
+            {
+                client.SendMessage(joinedChannel, string.Format(GTAcodes[e.ChatMessage.Message.ToUpper()], e.ChatMessage.Username));
             }
             else if (hitBySnowballData.isHitBySnowball && e.ChatMessage.DisplayName == "QuyaBot")
             {
