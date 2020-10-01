@@ -32,7 +32,6 @@ using OpenQA.Selenium.Support.Extensions;
 using MailKit.Net.Imap;
 using MailKit;
 using MailKit.Search;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace NortagesTwitchBot
@@ -77,6 +76,18 @@ namespace NortagesTwitchBot
             if (false && Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
                 NavigateToModersPanel(); 
+            }
+
+
+            var channelID = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
+            while (true)
+            {
+                Thread.Sleep(TimeSpan.FromSeconds(30));
+                if (TwitchHelpers.GetOnlineStatus(channelID))
+                {
+                    PubSub_OnStreamUp(null, null);
+                    break;
+                }
             }
         }
     
@@ -128,19 +139,10 @@ namespace NortagesTwitchBot
             pubsub.OnPubSubServiceClosed += Pubsub_OnPubSubServiceClosed;
             pubsub.OnPubSubServiceError += Pubsub_OnPubSubServiceError;
 
-            pubsub.ListenToRewards(TwitchHelpers.GetUserId(TwitchInfo.ChannelName));
-            pubsub.ListenToVideoPlayback(joinedChannel.Channel);
-            pubsub.Connect();
-        }
-
-        private static void Pubsub_OnPubSubServiceError(object sender, OnPubSubServiceErrorArgs e)
-        {
-            Console.WriteLine("[PUBSUB_ERROR] " + e.Exception.Message);
-        }
-
-        private static void Pubsub_OnPubSubServiceClosed(object sender, EventArgs e)
-        {
-            Console.WriteLine("[PUBSUB_CLOSED]");
+            var channelID = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
+            pubsub.ListenToRewards(channelID);
+            pubsub.ListenToVideoPlayback(TwitchInfo.ChannelName);
+            pubsub.Connect();            
         }
 
         private static void TwitchClientInitialize()
@@ -406,6 +408,16 @@ namespace NortagesTwitchBot
         #endregion TWITCH CLIENT SUBSCRIBERS
 
         #region PUBSUB SUBSCRIBERS
+
+        private static void Pubsub_OnPubSubServiceError(object sender, OnPubSubServiceErrorArgs e)
+        {
+            Console.WriteLine("[PUBSUB_ERROR] " + e.Exception.Message);
+        }
+
+        private static void Pubsub_OnPubSubServiceClosed(object sender, EventArgs e)
+        {
+            Console.WriteLine("[PUBSUB_CLOSED]");
+        }
 
         private static void PubSub_OnStreamUp(object sender, OnStreamUpArgs e)
         {

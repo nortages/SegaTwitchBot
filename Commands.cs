@@ -40,18 +40,18 @@ namespace NortagesTwitchBot
                 if (string.IsNullOrEmpty(e.Command.ArgumentsAsString))
                 {
                     (string timeouts, string bans) = GetChannelStats(senderUsername);
-                    output = $"@{senderUsername}, you have got {timeouts} timeouts and {bans} bans.";
+                    output = $"{senderUsername}, {timeouts} timeouts and {bans} bans.";
                 }
                 else
                 {
                     var userName = e.Command.ArgumentsAsString.TrimStart('@');
                     (string timeouts, string bans) = GetChannelStats(userName);
-                    output = $"@{senderUsername}, the user {userName} has {timeouts} timeouts and {bans} bans.";
+                    output = $"{senderUsername}, the user {userName} has {timeouts} timeouts and {bans} bans.";
                 }
             }
             catch (NoSuchElementException)
             {
-                output = $"@{senderUsername}, the user {e.Command.ArgumentsAsString} isn't present on the stream now.";
+                output = $"{senderUsername}, no user matching that login.";
             }
 
             client.SendMessage(e.Command.ChatMessage.Channel, output);
