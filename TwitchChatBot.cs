@@ -147,7 +147,7 @@ namespace NortagesTwitchBot
 
         private static void TwitchClientInitialize()
         {
-            ConnectionCredentials credentials = new ConnectionCredentials(TwitchInfo.BotUsername, TwitchInfo.BotToken, "wss://irc-ws.chat.fdgt.tv:433");
+            ConnectionCredentials credentials = new ConnectionCredentials(TwitchInfo.BotUsername, TwitchInfo.BotToken);
             var clientOptions = new ClientOptions
             {
                 MessagesAllowedInPeriod = 100,
@@ -448,7 +448,7 @@ namespace NortagesTwitchBot
 
         private static void PubSub_OnStreamUp(object sender, OnStreamUpArgs e)
         {
-            client.SendMessage(joinedChannel, "Привет всем и хорошего стрима! peepoLove");
+            //client.SendMessage(joinedChannel, "Привет всем и хорошего стрима! peepoLove");
             Console.WriteLine("The stream just has started");
         }
 
