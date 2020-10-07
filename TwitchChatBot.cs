@@ -78,17 +78,16 @@ namespace NortagesTwitchBot
                 NavigateToModersPanel(); 
             }
 
-
-            var channelID = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
-            while (true)
-            {
-                Thread.Sleep(TimeSpan.FromSeconds(30));
-                if (TwitchHelpers.GetOnlineStatus(channelID))
-                {
-                    PubSub_OnStreamUp(null, null);
-                    break;
-                }
-            }
+            //var channelID = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
+            //while (true)
+            //{
+            //    Thread.Sleep(TimeSpan.FromSeconds(30));
+            //    if (TwitchHelpers.GetOnlineStatus(channelID))
+            //    {
+            //        PubSub_OnStreamUp(null, null);
+            //        break;
+            //    }
+            //}
         }
     
         #region Initialization
@@ -141,8 +140,7 @@ namespace NortagesTwitchBot
 
             var channelID = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
             pubsub.ListenToRewards(channelID);
-            pubsub.ListenToVideoPlayback(TwitchInfo.ChannelName);
-            pubsub.Connect();            
+            pubsub.Connect();
         }
 
         private static void TwitchClientInitialize()
@@ -399,7 +397,6 @@ namespace NortagesTwitchBot
         {
             client.SendMessage(joinedChannel, $"{e.Subscriber.DisplayName}, спасибо за подписку! bleedPurple Давайте сюда Ваш паспорт FBCatch kupaPasport");
         }
-
 
         private static void Client_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
         {
