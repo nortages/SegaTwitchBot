@@ -133,6 +133,7 @@ namespace NortagesTwitchBot
 
         private static void PubSubInitialize()
         {
+            pubsub?.Disconnect();
             pubsub = new TwitchPubSub();
             pubsub.OnPubSubServiceConnected += PubSub_OnPubSubServiceConnected;
             pubsub.OnListenResponse += PubSub_OnListenResponse;
