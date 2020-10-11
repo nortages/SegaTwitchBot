@@ -78,16 +78,16 @@ namespace NortagesTwitchBot
                 NavigateToModersPanel(); 
             }
 
-            //var channelID = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
-            //while (true)
-            //{
-            //    Thread.Sleep(TimeSpan.FromSeconds(30));
-            //    if (TwitchHelpers.GetOnlineStatus(channelID))
-            //    {
-            //        PubSub_OnStreamUp(null, null);
-            //        break;
-            //    }
-            //}
+            var channelID = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
+            while (true)
+            {
+                Thread.Sleep(TimeSpan.FromSeconds(30));
+                if (TwitchHelpers.GetOnlineStatus(channelID))
+                {
+                    PubSub_OnStreamUp(null, null);
+                    break;
+                }
+            }
         }
     
         #region Initialization
@@ -222,6 +222,21 @@ namespace NortagesTwitchBot
             {
                 var userToBan = e.Command.ArgumentsAsString.TrimStart('@');
                 client.SendMessage(joinedChannel, $"Пользователь {userToBan} был забанен.");
+            }
+            else if (e.Command.CommandText == "pubsub")
+            {
+                if (e.Command.ArgumentsAsString == "on")
+                {
+                    pubsub.Connect();
+                }
+                else if (e.Command.ArgumentsAsString == "on full")
+                {
+                    PubSubInitialize();
+                }
+                else if (e.Command.ArgumentsAsString == "off")
+                {
+                    pubsub.Disconnect();
+                }
             }
             #endregion Currently not used
         }
@@ -435,7 +450,7 @@ namespace NortagesTwitchBot
 
         private static void Pubsub_OnPubSubServiceError(object sender, OnPubSubServiceErrorArgs e)
         {
-            Console.WriteLine("[PUBSUB_ERROR] " + e.Exception.Message);
+            Console.WriteLine("[PUBSUB_ERROR]");
         }
 
         private static void Pubsub_OnPubSubServiceClosed(object sender, EventArgs e)
@@ -447,6 +462,7 @@ namespace NortagesTwitchBot
         {
             //client.SendMessage(joinedChannel, "Привет всем и хорошего стрима! peepoLove");
             Console.WriteLine("The stream just has started");
+            pubsub.Connect();
         }
 
         private static void PubSub_OnRewardRedeemed(object sender, OnRewardRedeemedArgs e)
