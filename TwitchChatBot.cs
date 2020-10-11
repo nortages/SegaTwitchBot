@@ -33,14 +33,15 @@ using MailKit.Net.Imap;
 using MailKit;
 using MailKit.Search;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Logging;
 
 namespace NortagesTwitchBot
 {
     public static class TwitchChatBot
     {
+        static TwitchPubSub pubsub;
         public static TwitchClient client;
         public static SheetsService sheetsService;
-        static readonly TwitchPubSub pubsub = new TwitchPubSub();
         static readonly JoinedChannel joinedChannel = new JoinedChannel(TwitchInfo.ChannelName);
         static readonly HttpClient HTTPClient = new HttpClient();
         static readonly VkApi vkApi = new VkApi();
@@ -132,6 +133,7 @@ namespace NortagesTwitchBot
 
         private static void PubSubInitialize()
         {
+            pubsub = new TwitchPubSub();
             pubsub.OnPubSubServiceConnected += PubSub_OnPubSubServiceConnected;
             pubsub.OnListenResponse += PubSub_OnListenResponse;
             pubsub.OnRewardRedeemed += PubSub_OnRewardRedeemed;
@@ -226,11 +228,7 @@ namespace NortagesTwitchBot
             }
             else if (e.Command.CommandText == "pubsub" && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.Username.ToLower() == OwnerUsername))
             {
-                if (e.Command.ArgumentsAsString == "on")
-                {
-                    pubsub.Connect();
-                }
-                else if (e.Command.ArgumentsAsString == "on full")
+                if (e.Command.ArgumentsAsString == "reset")
                 {
                     PubSubInitialize();
                 }
