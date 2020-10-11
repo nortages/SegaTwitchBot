@@ -1,7 +1,7 @@
 ﻿using Org.BouncyCastle.Math.EC.Rfc7748;
 using System;
 using System.Collections.Generic;
-
+using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Api.Core.Interfaces;
 using TwitchLib.Api.Core.Models.Undocumented.Chatters;
@@ -12,6 +12,7 @@ using TwitchLib.Api.Helix.Models.Subscriptions;
 using TwitchLib.Api.Helix.Models.Users;
 using TwitchLib.Api.ThirdParty.UsernameChange;
 using TwitchLib.Api.V5.Models.Channels;
+using TwitchLib.Client;
 
 namespace NortagesTwitchBot
 {
@@ -25,6 +26,11 @@ namespace NortagesTwitchBot
             twitchAPI.Settings.ClientId = TwitchInfo.ClientID;
             twitchAPI.Settings.AccessToken = TwitchInfo.BotToken;
             twitchAPI.Settings.Secret = "Twitch"; // Need to not hard code this
+        }
+
+        public static void SendMessageWithDelay(this TwitchClient client, string channel, string message, TimeSpan delay)
+        {
+            Task.Delay(delay).ContinueWith(t => client.SendMessage(channel, message));
         }
 
         public static bool GetOnlineStatus(string channelId)

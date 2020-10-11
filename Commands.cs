@@ -15,23 +15,14 @@ using Google.Apis.Sheets.v4;
 
 namespace NortagesTwitchBot
 {
-    public static class Commands
+    public partial class TwitchChatBot
     {
         const string linkToHOF = "https://docs.google.com/spreadsheets/d/19RwGl1i79-3ZuVYyytfyvsg_wVprvozMSyooAy3HaU8";
         const string spreadsheetId_HOF = "19RwGl1i79-3ZuVYyytfyvsg_wVprvozMSyooAy3HaU8";
-        static bool timeToPolling = false;
-        static Dictionary<string, int> votes;
-        public static TwitchClient client;
-        public static ChromeDriver driver;
-        public static SheetsService sheetsService;
+        bool timeToPolling = false;
+        Dictionary<string, int> votes;
 
-        static Commands()
-        {
-            client = TwitchChatBot.client;
-            sheetsService = TwitchChatBot.sheetsService;
-        }
-
-        public static void BansCommand(OnChatCommandReceivedArgs e)
+        public void BansCommand(OnChatCommandReceivedArgs e)
         {
             string output;
             var senderUsername = e.Command.ChatMessage.DisplayName;
@@ -58,7 +49,7 @@ namespace NortagesTwitchBot
             Console.WriteLine(output);
         }
 
-        public static void SongCommand(OnChatCommandReceivedArgs e)
+        public void SongCommand(OnChatCommandReceivedArgs e)
         {
             //var group = vk_api.Groups.GetByIdAsync(null, "120235040", GroupsFields.Status).Result.FirstOrDefault();
             //var result = group.StatusAudio != null ? $"{group.StatusAudio.Artist} - {group.StatusAudio.Title}" : "Сейчас у стримера в вк ничего не играет :(";
@@ -71,7 +62,7 @@ namespace NortagesTwitchBot
 
         #region Currently not used
 
-        public static async Task ShowResult(OnChatCommandReceivedArgs e)
+        public async Task ShowResult(OnChatCommandReceivedArgs e)
         {
             if (int.TryParse(e.Command.ArgumentsAsString, out int result))
             {
@@ -98,7 +89,7 @@ namespace NortagesTwitchBot
             }
         }
 
-        public static async Task StopVotingCommand(OnChatCommandReceivedArgs e)
+        public async Task StopVotingCommand(OnChatCommandReceivedArgs e)
         {
             if (timeToPolling) return;
             timeToPolling = false;
@@ -123,7 +114,7 @@ namespace NortagesTwitchBot
             client.SendMessage(e.Command.ChatMessage.Channel, message);
         }
 
-        public static void StartVotingCommand(OnChatCommandReceivedArgs e)
+        public void StartVotingCommand(OnChatCommandReceivedArgs e)
         {
             timeToPolling = true;
             votes = new Dictionary<string, int>();
@@ -131,7 +122,7 @@ namespace NortagesTwitchBot
             Console.WriteLine("Polling just started!");
         }
 
-        public static void HallOfFameCommand(OnChatCommandReceivedArgs e)
+        public void HallOfFameCommand(OnChatCommandReceivedArgs e)
         {
             var winners = GetHallOfFame();
             if (e.Command.ArgumentsAsString == "фулл")
@@ -154,7 +145,7 @@ namespace NortagesTwitchBot
             }
         }
 
-        public static void MmrCommand(OnChatCommandReceivedArgs e)
+        public void MmrCommand(OnChatCommandReceivedArgs e)
         {
             if (timeToPolling && int.TryParse(e.Command.ArgumentsAsString, out int vote))
             {
@@ -165,7 +156,7 @@ namespace NortagesTwitchBot
 
         #endregion Currently not used
 
-        private static (string timeouts, string bans) GetChannelStats(string userName)
+        private (string timeouts, string bans) GetChannelStats(string userName)
         {
             var inputElement = driver.FindElement(By.XPath("//input[@name='viewers-filter']"), 10);
             inputElement.Clear();
@@ -185,7 +176,7 @@ namespace NortagesTwitchBot
             return (timeouts, bans);
         }
 
-        static Dictionary<string, int> GetHallOfFame()
+        Dictionary<string, int> GetHallOfFame()
         {
             string rangeToRead = "HallOfFame!A2:B";
             var request = sheetsService.Spreadsheets.Values.Get(spreadsheetId_HOF, rangeToRead);
@@ -209,7 +200,7 @@ namespace NortagesTwitchBot
             }
         }
 
-        static void UpdateHallOfFame(string winner)
+        void UpdateHallOfFame(string winner)
         {
             string rangeToWrite = "HallOfFame!A2";
 

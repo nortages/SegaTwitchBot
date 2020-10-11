@@ -33,40 +33,42 @@ using MailKit.Net.Imap;
 using MailKit;
 using MailKit.Search;
 using Newtonsoft.Json;
-using Microsoft.Extensions.Logging;
 
 namespace NortagesTwitchBot
 {
-    public static class TwitchChatBot
+    public partial class TwitchChatBot
     {
-        static TwitchPubSub pubsub;
-        public static TwitchClient client;
-        public static SheetsService sheetsService;
-        static readonly JoinedChannel joinedChannel = new JoinedChannel(TwitchInfo.ChannelName);
-        static readonly HttpClient HTTPClient = new HttpClient();
-        static readonly VkApi vkApi = new VkApi();
-        static readonly Random rand = new Random();
+        TwitchClient client;
+        TwitchPubSub pubsub;
+        SheetsService sheetsService;
+        readonly JoinedChannel joinedChannel = new JoinedChannel(TwitchInfo.ChannelName);
+        readonly HttpClient HTTPClient = new HttpClient();
+        readonly VkApi vkApi = new VkApi();
+        readonly Random rand = new Random();
 
-        static ChromeDriver driver;
+        ChromeDriver driver;
 
-        static int massGifts = 0;
+        int massGifts = 0;
         const int TIMEOUTTIME = 10;
-        private const string OwnerUsername = "segatron_lapki";
-        static (bool flag, int num) timeoutUserBelowData = (false, 0);
-        static (bool isHitBySnowball, string userName) hitBySnowballData = (false, null);
-        static readonly HashSet<string> usersWithShield = new HashSet<string>();
+        const string OwnerUsername = "segatron_lapki";
+        (bool flag, int num) timeoutUserBelowData = (false, 0);
+        (bool isHitBySnowball, string userName) hitBySnowballData = (false, null);
+        readonly HashSet<string> usersWithShield = new HashSet<string>();
+
+        readonly string[] songCommands = new string[] { "song", "music", "песня", "музыка" };
+        readonly string[] bansCommands = new string[] { "bans", "баны" };
 
         static readonly RegexOptions regexOptions = RegexOptions.Compiled | RegexOptions.IgnoreCase;
-        static readonly Regex regex_trimEndFromQuyaBot = new Regex(@"\[\d\]", regexOptions);
-        static readonly Regex regex_botsPlusToChat = new Regex(@".*?Боты?,? \+ в ча[тй].*", regexOptions);
-        static readonly Regex regex_hiToBot = new Regex(@".+?NortagesBot.+?(Привет|Здравствуй|Даров|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|Q{1,2}).*", regexOptions);
-        static readonly Regex regex_botCheck = new Regex(@"@NortagesBot (Жив|Живой|Тут|Здесь)\?", regexOptions);
-        static readonly Regex regex_botLox = new Regex(@"@NortagesBot (kupaLox|лох)", regexOptions);
-        static readonly Regex regex_botWorryStick = new Regex(@"@NortagesBot( worryStick)+", regexOptions);
+        readonly Regex regex_trimEndFromQuyaBot = new Regex(@"\[\d\]", regexOptions);
+        readonly Regex regex_botsPlusToChat = new Regex(@".*?Боты?,? \+ в ча[тй].*", regexOptions);
+        readonly Regex regex_hiToBot = new Regex(@".+?NortagesBot.+?(Привет|Здравствуй|Даров|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|Q{1,2}).*", regexOptions);
+        readonly Regex regex_botCheck = new Regex(@"@NortagesBot (Жив|Живой|Тут|Здесь)\?", regexOptions);
+        readonly Regex regex_botLox = new Regex(@"@NortagesBot (kupaLox|лох)", regexOptions);
+        readonly Regex regex_botWorryStick = new Regex(@"@NortagesBot( worryStick)+", regexOptions);
 
-        static readonly Dictionary<string, string> GTAcodes = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("gta_codes.json"));
+        readonly Dictionary<string, string> GTAcodes = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("gta_codes.json"));
 
-        public static void Connect()
+        public void Connect()
         {
             TwitchClientInitialize();
             PubSubInitialize();
@@ -77,30 +79,41 @@ namespace NortagesTwitchBot
 
             if (false && Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
-                NavigateToModersPanel(); 
+                NavigateToModersPanel();
             }
 
+            CheckStreamerOnlineStatus();
+        }
+
+        private void CheckStreamerOnlineStatus()
+        {
             var channelID = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
+            var isOnline = false;
             while (true)
             {
-                Thread.Sleep(TimeSpan.FromSeconds(30));
-                if (TwitchHelpers.GetOnlineStatus(channelID))
+                Thread.Sleep(TimeSpan.FromMinutes(5));
+                bool isTempOnline;
+                if (isOnline != (isTempOnline = TwitchHelpers.GetOnlineStatus(channelID)))
                 {
-                    PubSub_OnStreamUp(null, null);
-                    break;
+                    isOnline = isTempOnline;
+                    if (isOnline)
+                    {
+                        PubSub_OnStreamUp(null, null);
+                        break;
+                    }
                 }
             }
         }
-    
+
         #region Initialization
 
-        private static void JSONBinInitialize()
+        void JSONBinInitialize()
         {
             HTTPClient.DefaultRequestHeaders.Add("secret-key", TwitchInfo.JsonBinSecret);
             HTTPClient.DefaultRequestHeaders.Add("versioning", "false");
         }
 
-        private static void VKApiInitialize()
+        void VKApiInitialize()
         {
             vkApi.Authorize(new ApiAuthParams
             {
@@ -108,7 +121,7 @@ namespace NortagesTwitchBot
             });
         }
 
-        private static void GoogleSheetsServiceInitialize()
+        void GoogleSheetsServiceInitialize()
         {
             GoogleCredential credential;
             string[] scopes = { SheetsService.Scope.Spreadsheets };
@@ -131,7 +144,7 @@ namespace NortagesTwitchBot
             });
         }
 
-        private static void PubSubInitialize()
+        void PubSubInitialize()
         {
             pubsub?.Disconnect();
             pubsub = new TwitchPubSub();
@@ -147,7 +160,7 @@ namespace NortagesTwitchBot
             pubsub.Connect();
         }
 
-        private static void TwitchClientInitialize()
+        void TwitchClientInitialize()
         {
             ConnectionCredentials credentials = new ConnectionCredentials(TwitchInfo.BotUsername, TwitchInfo.BotToken);
             var clientOptions = new ClientOptions
@@ -180,17 +193,17 @@ namespace NortagesTwitchBot
 
         #region TWITCH CLIENT SUBSCRIBERS
 
-        private static async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
+        async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
         {
-            if (new string[] { "song", "music", "песня", "музыка" }.Contains(e.Command.CommandText))
+            if (songCommands.Contains(e.Command.CommandText))
             {
-                Commands.SongCommand(e);
+                SongCommand(e);
             }
             else if (e.Command.CommandText == "промокод")
             {
                 client.SendMessage(joinedChannel, "kira - лучший промокод на mycsgoo.net TakeNRG");
             }
-            else if (new string[] { "bans", "баны" }.Contains(e.Command.CommandText))
+            else if (bansCommands.Contains(e.Command.CommandText))
             {
                 //Commands.BansCommand(e);
             }
@@ -204,23 +217,23 @@ namespace NortagesTwitchBot
             #region Currently not used
             else if (new string[] { "mmr", "ммр" }.Contains(e.Command.CommandText))
             {
-                Commands.MmrCommand(e);
+                MmrCommand(e);
             }
             else if (new string[] { "hof", "залславы" }.Contains(e.Command.CommandText))
             {
-                Commands.HallOfFameCommand(e);
+                HallOfFameCommand(e);
             }
             else if (new string[] { "startvoting", "начатьголосование" }.Contains(e.Command.CommandText) && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
             {
-                Commands.StartVotingCommand(e);
+                StartVotingCommand(e);
             }
             else if (new string[] { "stopvoting", "закончитьголосование" }.Contains(e.Command.CommandText) && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
             {
-                await Commands.StopVotingCommand(e);
+                await StopVotingCommand(e);
             }
             else if (new string[] { "showresult", "показать результат" }.Contains(e.Command.CommandText) && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.IsBroadcaster))
             {
-                await Commands.ShowResult(e);
+                await ShowResult(e);
             }
             else if (e.Command.CommandText == "ban")
             {
@@ -229,7 +242,7 @@ namespace NortagesTwitchBot
             }
             else if (e.Command.CommandText == "pubsub" && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.Username.ToLower() == OwnerUsername))
             {
-                if (e.Command.ArgumentsAsString == "reset")
+                if (new string[] { "reset", "restart" }.Contains(e.Command.ArgumentsAsString))
                 {
                     PubSubInitialize();
                 }
@@ -241,7 +254,7 @@ namespace NortagesTwitchBot
             #endregion Currently not used
         }
 
-        private static void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
+        void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
             if (timeoutUserBelowData.flag && !e.ChatMessage.IsModerator && !e.ChatMessage.IsBroadcaster)
             {
@@ -266,7 +279,7 @@ namespace NortagesTwitchBot
             }
             else if (regex_hiToBot.IsMatch(e.ChatMessage.Message))
             {
-                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} Приветствую MrDestructoid");
+                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} Привет MrDestructoid");
             }
             else if (regex_botCheck.IsMatch(e.ChatMessage.Message))
             {
@@ -349,7 +362,7 @@ namespace NortagesTwitchBot
                 }
                 else if (message == $"{snowballSender} метко попадает снежком в лицо {botUsername}. Ну что, вкусный снег в этом году?")
                 {
-                    client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " *Пфу-пфу* Микросхемы мне корпус, ты что творишь??", messageCooldown);
+                    client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " *Пфу-пфу* Микросхемы мне в корпус, ты что творишь??", messageCooldown);
                     client.SendMessageWithDelay(e.ChatMessage.Channel, $"!снежок @{snowballSender}", commandCooldown);
                 }
                 else if (message == $"{snowballSender} пытается кинуть снежок, но неклюже поскальзывается и падает прямо в сугроб. Видимо, сегодня неудачный день!")
@@ -363,12 +376,7 @@ namespace NortagesTwitchBot
             }
         }
 
-        private static void SendMessageWithDelay(this TwitchClient client, string channel, string message, TimeSpan delay)
-        {
-            Task.Delay(delay).ContinueWith(t => client.SendMessage(channel, message));
-        }
-
-        private static void Client_OnCommunitySubscription(object sender, OnCommunitySubscriptionArgs e)
+        void Client_OnCommunitySubscription(object sender, OnCommunitySubscriptionArgs e)
         {
             massGifts = e.GiftedSubscription.MsgParamMassGiftCount;
             if (e.GiftedSubscription.MsgParamMassGiftCount == 1)
@@ -386,7 +394,7 @@ namespace NortagesTwitchBot
             }
         }
 
-        private static void Client_OnGiftedSubscription(object sender, OnGiftedSubscriptionArgs e)
+        void Client_OnGiftedSubscription(object sender, OnGiftedSubscriptionArgs e)
         {
             if (massGifts > 0)
             {
@@ -403,43 +411,43 @@ namespace NortagesTwitchBot
             }
         }
 
-        private static void Client_OnReSubscriber(object sender, OnReSubscriberArgs e)
+        void Client_OnReSubscriber(object sender, OnReSubscriberArgs e)
         {
             client.SendMessage(joinedChannel, $"{e.ReSubscriber.DisplayName}, спасибо за продление подписки! Poooound");
         }
 
-        private static void Client_OnNewSubscriber(object sender, OnNewSubscriberArgs e)
+        void Client_OnNewSubscriber(object sender, OnNewSubscriberArgs e)
         {
             client.SendMessage(joinedChannel, $"{e.Subscriber.DisplayName}, спасибо за подписку! bleedPurple Давайте сюда Ваш паспорт FBCatch kupaPasport");
         }
 
-        private static void Client_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
+        void Client_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
         {
             Console.WriteLine($"{e.DateTime}: {e.BotUsername} - {e.Data}");
             // TODO: Once in a while save logs to a file
         }
 
-        private static void Client_OnJoinedChannel(object sender, OnJoinedChannelArgs e)
+        void Client_OnJoinedChannel(object sender, OnJoinedChannelArgs e)
         {
             Console.WriteLine("Hey guys! I am a bot connected via TwitchLib!");
         }
 
-        private static void Client_OnConnected(object sender, OnConnectedArgs e)
+        void Client_OnConnected(object sender, OnConnectedArgs e)
         {
             Console.WriteLine($"Connected to {e.AutoJoinChannel}");
         }
 
-        private static void Client_OnError(object sender, OnErrorEventArgs e)
+        void Client_OnError(object sender, OnErrorEventArgs e)
         {
             Console.WriteLine($"ERROR: {e.Exception.Message}\n{e.Exception.StackTrace}");
         }
 
-        private static void Client_OnConnectionError(object sender, OnConnectionErrorArgs e)
+        void Client_OnConnectionError(object sender, OnConnectionErrorArgs e)
         {
             Console.WriteLine(e.Error);
         }
 
-        private static void Client_OnDisconnected(object sender, OnDisconnectedEventArgs e)
+        void Client_OnDisconnected(object sender, OnDisconnectedEventArgs e)
         {
             Disconnect();
         }
@@ -448,30 +456,30 @@ namespace NortagesTwitchBot
 
         #region PUBSUB SUBSCRIBERS
 
-        private static void Pubsub_OnPubSubServiceError(object sender, OnPubSubServiceErrorArgs e)
+        void Pubsub_OnPubSubServiceError(object sender, OnPubSubServiceErrorArgs e)
         {
-            Console.WriteLine("[PUBSUB_ERROR] " + e.Exception.Message);
+            Console.WriteLine($"[PUBSUB_ERROR]\nMessage: {e.Exception.Message}\nStackTrace: {e.Exception.StackTrace}\nData: {e.Exception.Data}\nSource: {e.Exception.Source}");
         }
 
-        private static void Pubsub_OnPubSubServiceClosed(object sender, EventArgs e)
+        void Pubsub_OnPubSubServiceClosed(object sender, EventArgs e)
         {
             Console.WriteLine("[PUBSUB_CLOSED]");
         }
 
-        private static void PubSub_OnStreamUp(object sender, OnStreamUpArgs e)
+        void PubSub_OnStreamUp(object sender, OnStreamUpArgs e)
         {
             //client.SendMessage(joinedChannel, "Привет всем и хорошего стрима! peepoLove");
             Console.WriteLine("The stream just has started");
             pubsub.Connect();
         }
 
-        private static void PubSub_OnRewardRedeemed(object sender, OnRewardRedeemedArgs e)
+        void PubSub_OnRewardRedeemed(object sender, OnRewardRedeemedArgs e)
         {
             if (e.Status == "UNFULFILLED") {
                 Console.WriteLine("\nSomeone redeemed a reward!");
-                Console.WriteLine($"Name: {e.DisplayName},\nStatus: {e.Status},\nTitle: {e.RewardTitle},\nMessage: {e.Message},\nPrompt: {e.RewardPrompt}\n");
+                Console.WriteLine($"Name: {e.DisplayName},\nTitle: {e.RewardTitle}\n");
 
-                var rewardTestName = "Сдать дань"; // TODO: Change rewardTestName
+                var rewardTestName = "Сдать дань";
 
                 if (e.RewardTitle.Contains("Таймач самому себе"))
                 {
@@ -490,7 +498,7 @@ namespace NortagesTwitchBot
             }            
         }
 
-        private static void PubSub_OnPubSubServiceConnected(object sender, EventArgs e)
+        void PubSub_OnPubSubServiceConnected(object sender, EventArgs e)
         {
             // SendTopics accepts an oauth optionally, which is necessary for some topics
             Console.WriteLine("PubSub Service is Connected");
@@ -498,7 +506,7 @@ namespace NortagesTwitchBot
             pubsub.SendTopics(TwitchInfo.BotToken);
         }
 
-        private static void PubSub_OnListenResponse(object sender, OnListenResponseArgs e)
+        void PubSub_OnListenResponse(object sender, OnListenResponseArgs e)
         {
             if (e.Successful)
                 Console.WriteLine($"Successfully verified listening to topic: {e.Topic}");
@@ -508,7 +516,7 @@ namespace NortagesTwitchBot
 
         #endregion PUBSUB SUBSCRIBERS
 
-        private static void FindAnonymousGifter()
+        void FindAnonymousGifter()
         {
             const string spreadsheetId_Anon = "1IoXknFKw-f_FmMrxB9-ni5wgSg5JFCJSt0Gq06m1KEM";
 
@@ -532,7 +540,7 @@ namespace NortagesTwitchBot
             upd_request.Execute();
         }
 
-        private static Task<IList<string>> GetViewers(int wait_seconds = 8)
+        Task<IList<string>> GetViewers(int wait_seconds = 8)
         {
             // Gets the chrome driver and navigate to the stream's chat page.
             ChromeDriver driver;
@@ -614,7 +622,7 @@ namespace NortagesTwitchBot
             return Task.FromResult(viewers_nicks);
         }
 
-        private static void NavigateToModersPanel()
+        void NavigateToModersPanel()
         {
             var chrome_options = new ChromeOptions();
             if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
@@ -622,13 +630,12 @@ namespace NortagesTwitchBot
                 chrome_options.BinaryLocation = Environment.GetEnvironmentVariable("GOOGLE_CHROME_SHIM");
             }
             driver = new ChromeDriver(chrome_options);
-            Commands.driver = driver;
             driver.Navigate().GoToUrl("https://www.twitch.tv/moderator/k_i_ra");
 
             SignInToTwitch(driver);
         }
 
-        private static void SignInToTwitch(ChromeDriver driver)
+        void SignInToTwitch(ChromeDriver driver)
         {
             var loginField = driver.FindElement(By.Id("login-username"), 5);
             loginField.SendKeys(TwitchInfo.BotUsername);
@@ -657,7 +664,7 @@ namespace NortagesTwitchBot
             }
         }
 
-        private static string GetVerificationCode(ChromeDriver driver)
+        string GetVerificationCode(ChromeDriver driver)
         {
             using var imapClient = new ImapClient();
 
@@ -697,7 +704,7 @@ namespace NortagesTwitchBot
             return code;
         }
 
-        private static void Disconnect()
+        void Disconnect()
         {
             Console.WriteLine("Disconnecting...");
             //client.SendMessage(joinedChannel, "The plug has been pulled. My time is up. Until next time. ResidentSleeper");
