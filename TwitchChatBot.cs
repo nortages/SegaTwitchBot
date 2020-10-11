@@ -50,6 +50,7 @@ namespace NortagesTwitchBot
 
         static int massGifts = 0;
         const int TIMEOUTTIME = 10;
+        private const string OwnerUsername = "segatron_lapki";
         static (bool flag, int num) timeoutUserBelowData = (false, 0);
         static (bool isHitBySnowball, string userName) hitBySnowballData = (false, null);
         static readonly HashSet<string> usersWithShield = new HashSet<string>();
@@ -223,7 +224,7 @@ namespace NortagesTwitchBot
                 var userToBan = e.Command.ArgumentsAsString.TrimStart('@');
                 client.SendMessage(joinedChannel, $"Пользователь {userToBan} был забанен.");
             }
-            else if (e.Command.CommandText == "pubsub")
+            else if (e.Command.CommandText == "pubsub" && (e.Command.ChatMessage.IsModerator || e.Command.ChatMessage.Username.ToLower() == OwnerUsername))
             {
                 if (e.Command.ArgumentsAsString == "on")
                 {
@@ -450,7 +451,7 @@ namespace NortagesTwitchBot
 
         private static void Pubsub_OnPubSubServiceError(object sender, OnPubSubServiceErrorArgs e)
         {
-            Console.WriteLine("[PUBSUB_ERROR]");
+            Console.WriteLine("[PUBSUB_ERROR] " + e.Exception.Message);
         }
 
         private static void Pubsub_OnPubSubServiceClosed(object sender, EventArgs e)
