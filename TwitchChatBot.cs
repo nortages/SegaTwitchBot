@@ -85,7 +85,7 @@ namespace NortagesTwitchBot
             CheckStreamerOnlineStatus();
         }
 
-        private void CheckStreamerOnlineStatus()
+        void CheckStreamerOnlineStatus()
         {
             var channelID = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
             var isOnline = false;

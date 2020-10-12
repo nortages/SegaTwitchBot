@@ -22,7 +22,7 @@ namespace NortagesTwitchBot
         bool timeToPolling = false;
         Dictionary<string, int> votes;
 
-        public void BansCommand(OnChatCommandReceivedArgs e)
+        void BansCommand(OnChatCommandReceivedArgs e)
         {
             string output;
             var senderUsername = e.Command.ChatMessage.DisplayName;
@@ -49,7 +49,7 @@ namespace NortagesTwitchBot
             Console.WriteLine(output);
         }
 
-        public void SongCommand(OnChatCommandReceivedArgs e)
+        void SongCommand(OnChatCommandReceivedArgs e)
         {
             //var group = vk_api.Groups.GetByIdAsync(null, "120235040", GroupsFields.Status).Result.FirstOrDefault();
             //var result = group.StatusAudio != null ? $"{group.StatusAudio.Artist} - {group.StatusAudio.Title}" : "Сейчас у стримера в вк ничего не играет :(";
@@ -62,7 +62,7 @@ namespace NortagesTwitchBot
 
         #region Currently not used
 
-        public async Task ShowResult(OnChatCommandReceivedArgs e)
+        async Task ShowResult(OnChatCommandReceivedArgs e)
         {
             if (int.TryParse(e.Command.ArgumentsAsString, out int result))
             {
@@ -89,7 +89,7 @@ namespace NortagesTwitchBot
             }
         }
 
-        public async Task StopVotingCommand(OnChatCommandReceivedArgs e)
+        async Task StopVotingCommand(OnChatCommandReceivedArgs e)
         {
             if (timeToPolling) return;
             timeToPolling = false;
@@ -114,7 +114,7 @@ namespace NortagesTwitchBot
             client.SendMessage(e.Command.ChatMessage.Channel, message);
         }
 
-        public void StartVotingCommand(OnChatCommandReceivedArgs e)
+        void StartVotingCommand(OnChatCommandReceivedArgs e)
         {
             timeToPolling = true;
             votes = new Dictionary<string, int>();
@@ -122,7 +122,7 @@ namespace NortagesTwitchBot
             Console.WriteLine("Polling just started!");
         }
 
-        public void HallOfFameCommand(OnChatCommandReceivedArgs e)
+        void HallOfFameCommand(OnChatCommandReceivedArgs e)
         {
             var winners = GetHallOfFame();
             if (e.Command.ArgumentsAsString == "фулл")
@@ -145,7 +145,7 @@ namespace NortagesTwitchBot
             }
         }
 
-        public void MmrCommand(OnChatCommandReceivedArgs e)
+        void MmrCommand(OnChatCommandReceivedArgs e)
         {
             if (timeToPolling && int.TryParse(e.Command.ArgumentsAsString, out int vote))
             {
@@ -156,7 +156,7 @@ namespace NortagesTwitchBot
 
         #endregion Currently not used
 
-        private (string timeouts, string bans) GetChannelStats(string userName)
+        (string timeouts, string bans) GetChannelStats(string userName)
         {
             var inputElement = driver.FindElement(By.XPath("//input[@name='viewers-filter']"), 10);
             inputElement.Clear();
