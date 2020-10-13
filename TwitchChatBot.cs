@@ -48,6 +48,7 @@ namespace NortagesTwitchBot
 
         ChromeDriver driver;
 
+        string ChannelId;
         int massGifts = 0;
         const int TIMEOUTTIME = 10;
         const string OwnerUsername = "segatron_lapki";
@@ -87,13 +88,13 @@ namespace NortagesTwitchBot
 
         void CheckStreamerOnlineStatus()
         {
-            var channelID = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
+            ChannelId = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
             var isOnline = false;
             while (true)
             {
                 Thread.Sleep(TimeSpan.FromMinutes(5));
                 bool isTempOnline;
-                if (isOnline != (isTempOnline = TwitchHelpers.GetOnlineStatus(channelID)))
+                if (isOnline != (isTempOnline = TwitchHelpers.GetOnlineStatus(ChannelId)))
                 {
                     isOnline = isTempOnline;
                     if (isOnline)
@@ -185,8 +186,18 @@ namespace NortagesTwitchBot
             client.OnReSubscriber += Client_OnReSubscriber;
             client.OnGiftedSubscription += Client_OnGiftedSubscription;
             client.OnCommunitySubscription += Client_OnCommunitySubscription;
+            client.OnWhisperReceived += Client_OnWhisperReceived;
 
             client.Connect();
+        }
+
+        private void Client_OnWhisperReceived(object sender, OnWhisperReceivedArgs e)
+        {
+            var senderId = e.WhisperMessage.UserId;
+            if (TwitchHelpers.IsUserSubscriber(senderId, ChannelId))
+            {
+                client.SendMessage(joinedChannel, $"{e.WhisperMessage.Username} передаёт: {e.WhisperMessage.Message}");            
+            }
         }
 
         #endregion Initialization

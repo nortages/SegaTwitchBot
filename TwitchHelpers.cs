@@ -28,6 +28,11 @@ namespace NortagesTwitchBot
             twitchAPI.Settings.Secret = "Twitch"; // Need to not hard code this
         }
 
+        public static bool IsUserSubscriber(string userId, string channelId)
+        {
+            return twitchAPI.V5.Users.CheckUserSubscriptionByChannelAsync(userId, channelId).Result != null;
+        }
+
         public static void SendMessageWithDelay(this TwitchClient client, string channel, string message, TimeSpan delay)
         {
             Task.Delay(delay).ContinueWith(t => client.SendMessage(channel, message));
