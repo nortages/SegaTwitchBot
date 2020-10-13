@@ -25,6 +25,7 @@ namespace NortagesTwitchBot
                 BotToken = items["BotToken"];
                 ClientID = items["ClientID"];
                 RefreshToken = items["RefreshToken"];
+                ChannelToken = items["ChannelToken"];
                 JsonBinSecret = items["JsonBinSecret"];
                 GoogleApiKey = items["GoogleApiKey"];
             }
@@ -38,6 +39,7 @@ namespace NortagesTwitchBot
                 BotToken = Environment.GetEnvironmentVariable("BotToken");
                 ClientID = Environment.GetEnvironmentVariable("ClientID");
                 RefreshToken = Environment.GetEnvironmentVariable("RefreshToken");
+                ChannelToken = Environment.GetEnvironmentVariable("ChannelToken");
                 JsonBinSecret = Environment.GetEnvironmentVariable("JsonBinSecret");
                 GoogleApiKey = Environment.GetEnvironmentVariable("GoogleApiKey");
             }
@@ -49,6 +51,7 @@ namespace NortagesTwitchBot
         public static string GmailEmail { get; private set; }
         public static string GmailPassword { get; private set; }
         public static string BotToken { get; private set; }
+        public static string ChannelToken { get; private set; }
         public static string ClientID { get; private set; }
         public static string RefreshToken { get; private set; }
         public static string JsonBinSecret { get; private set; }

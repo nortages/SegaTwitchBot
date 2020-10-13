@@ -83,12 +83,18 @@ namespace NortagesTwitchBot
                 NavigateToModersPanel();
             }
 
+            ChannelId = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
+
+            var userId1 = TwitchHelpers.GetUserId(OwnerUsername);
+            var userId2 = TwitchHelpers.GetUserId(TwitchInfo.BotUsername);
+            //TwitchHelpers.GetBroadcasterSubscriptions(ChannelId, userId1, channelOwnerToken);
+            //TwitchHelpers.GetBroadcasterSubscriptions(ChannelId, userId2, channelOwnerToken);
+
             CheckStreamerOnlineStatus();
         }
 
         void CheckStreamerOnlineStatus()
         {
-            ChannelId = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
             var isOnline = false;
             while (true)
             {
@@ -191,18 +197,18 @@ namespace NortagesTwitchBot
             client.Connect();
         }
 
-        private void Client_OnWhisperReceived(object sender, OnWhisperReceivedArgs e)
-        {
-            var senderId = e.WhisperMessage.UserId;
-            if (TwitchHelpers.IsUserSubscriber(senderId, ChannelId))
-            {
-                client.SendMessage(joinedChannel, $"{e.WhisperMessage.Username} передаёт: {e.WhisperMessage.Message}");            
-            }
-        }
-
         #endregion Initialization
 
         #region TWITCH CLIENT SUBSCRIBERS
+
+        private void Client_OnWhisperReceived(object sender, OnWhisperReceivedArgs e)
+        {
+            var senderId = e.WhisperMessage.UserId;
+            if (TwitchHelpers.IsSubscribeToChannel(ChannelId, senderId, TwitchInfo.ChannelToken))
+            {
+                client.SendMessage(joinedChannel, $"{e.WhisperMessage.Username} передаёт: {e.WhisperMessage.Message}");
+            }
+        }
 
         async void Client_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
         {

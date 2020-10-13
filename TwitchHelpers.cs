@@ -1,6 +1,9 @@
-﻿using Org.BouncyCastle.Math.EC.Rfc7748;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Org.BouncyCastle.Math.EC.Rfc7748;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Api.Core.Interfaces;
@@ -28,9 +31,30 @@ namespace NortagesTwitchBot
             twitchAPI.Settings.Secret = "Twitch"; // Need to not hard code this
         }
 
-        public static bool IsUserSubscriber(string userId, string channelId)
+        public static bool IsSubscribeToChannel(string broadcasterId, string userId, string accessToken = null)
         {
-            return twitchAPI.V5.Users.CheckUserSubscriptionByChannelAsync(userId, channelId).Result != null;
+            if (accessToken == null) accessToken = twitchAPI.Settings.AccessToken;
+            var url = @"https://api.twitch.tv/helix/subscriptions";
+
+            var webClient = new WebClient();
+            webClient.QueryString.Add("broadcaster_id", broadcasterId);
+            webClient.QueryString.Add("user_id", userId);
+            webClient.Headers.Add("Authorization", $"Bearer {accessToken}");
+            webClient.Headers.Add("Client-Id", TwitchInfo.ClientID);
+
+            string result;
+            try
+            {
+                result = webClient.DownloadString(url);
+            }
+            catch (WebException e)
+            {
+                Console.WriteLine(e.Response);
+                return false;
+            }
+            dynamic parsedData = JObject.Parse(result);
+            JArray jArray = parsedData.data;
+            return jArray.Count != 0;
         }
 
         public static void SendMessageWithDelay(this TwitchClient client, string channel, string message, TimeSpan delay)
