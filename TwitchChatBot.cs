@@ -1,38 +1,34 @@
-﻿using System;
+﻿using Google.Apis.Auth.OAuth2;
+using Google.Apis.Services;
+using Google.Apis.Sheets.v4;
+using Google.Apis.Sheets.v4.Data;
+using MailKit;
+using MailKit.Net.Imap;
+using MailKit.Search;
+using Newtonsoft.Json;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Support.Extensions;
+using OpenQA.Selenium.Support.UI;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
-
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Extensions;
 using TwitchLib.Client.Models;
-using TwitchLib.PubSub;
-using TwitchLib.PubSub.Events;
+using TwitchLib.Communication.Clients;
 using TwitchLib.Communication.Events;
 using TwitchLib.Communication.Models;
-using TwitchLib.Communication.Clients;
-
-using Google.Apis.Services;
-using Google.Apis.Sheets.v4;
-using Google.Apis.Sheets.v4.Data;
-using Google.Apis.Auth.OAuth2;
-
+using TwitchLib.PubSub;
+using TwitchLib.PubSub.Events;
 using VkNet;
 using VkNet.Model;
-
-using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium;
-using OpenQA.Selenium.Support.UI;
-using OpenQA.Selenium.Support.Extensions;
-using MailKit.Net.Imap;
-using MailKit;
-using MailKit.Search;
-using Newtonsoft.Json;
 
 namespace NortagesTwitchBot
 {
@@ -49,8 +45,9 @@ namespace NortagesTwitchBot
         ChromeDriver driver;
 
         string ChannelId;
+        readonly List<string> timedoutByBot = new List<string>();
         int massGifts = 0;
-        const int TIMEOUTTIME = 10;
+        readonly TimeSpan TIMEOUTTIME = TimeSpan.FromMinutes(10);
         const string OwnerUsername = "segatron_lapki";
         (bool flag, int num) timeoutUserBelowData = (false, 0);
         (bool isHitBySnowball, string userName) hitBySnowballData = (false, null);
@@ -84,12 +81,6 @@ namespace NortagesTwitchBot
             }
 
             ChannelId = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
-
-            var userId1 = TwitchHelpers.GetUserId(OwnerUsername);
-            var userId2 = TwitchHelpers.GetUserId(TwitchInfo.BotUsername);
-            //TwitchHelpers.GetBroadcasterSubscriptions(ChannelId, userId1, channelOwnerToken);
-            //TwitchHelpers.GetBroadcasterSubscriptions(ChannelId, userId2, channelOwnerToken);
-
             CheckStreamerOnlineStatus();
         }
 
@@ -204,7 +195,7 @@ namespace NortagesTwitchBot
         private void Client_OnWhisperReceived(object sender, OnWhisperReceivedArgs e)
         {
             var senderId = e.WhisperMessage.UserId;
-            if (TwitchHelpers.IsSubscribeToChannel(ChannelId, senderId, TwitchInfo.ChannelToken))
+            if (TwitchHelpers.IsSubscribeToChannel(ChannelId, senderId, TwitchInfo.ChannelToken) && timedoutByBot.Contains(e.WhisperMessage.Username))
             {
                 client.SendMessage(joinedChannel, $"{e.WhisperMessage.Username} передаёт: {e.WhisperMessage.Message}");
             }
@@ -282,10 +273,12 @@ namespace NortagesTwitchBot
                     usersWithShield.Remove(e.ChatMessage.DisplayName);
                     return;
                 }
-                client.TimeoutUser(joinedChannel, e.ChatMessage.DisplayName, TimeSpan.FromMinutes(TIMEOUTTIME * timeoutUserBelowData.num));
+                client.TimeoutUser(joinedChannel, e.ChatMessage.DisplayName, TimeSpan.FromTicks(TIMEOUTTIME.Ticks * timeoutUserBelowData.num));
                 timeoutUserBelowData.flag = false;
                 timeoutUserBelowData.num = 0;
                 Console.WriteLine($"{e.ChatMessage.DisplayName} is banned on {TIMEOUTTIME} minutes!");
+                timedoutByBot.Add(e.ChatMessage.Username);
+                Task.Delay(TIMEOUTTIME).ContinueWith(t => timedoutByBot.Remove(e.ChatMessage.Username));
                 return;
             }
 
@@ -492,27 +485,25 @@ namespace NortagesTwitchBot
 
         void PubSub_OnRewardRedeemed(object sender, OnRewardRedeemedArgs e)
         {
-            if (e.Status == "UNFULFILLED") {
-                Console.WriteLine("\nSomeone redeemed a reward!");
-                Console.WriteLine($"Name: {e.DisplayName},\nTitle: {e.RewardTitle}\n");
+            if (e.Status != "UNFULFILLED") return;
 
-                var rewardTestName = "Сдать дань";
+            Console.WriteLine("\nSomeone redeemed a reward!");
+            Console.WriteLine($"Name: {e.DisplayName},\nTitle: {e.RewardTitle}\n");
 
-                if (e.RewardTitle.Contains("Таймач самому себе"))
-                {
-                    client.TimeoutUser(joinedChannel, e.DisplayName, TimeSpan.FromMinutes(10));
-                }
-                else if (e.RewardTitle.Contains("Таймач человеку снизу"))
-                {
-                    timeoutUserBelowData.flag = true;
-                    timeoutUserBelowData.num++;
-                }
-                else if (false && e.RewardTitle.Contains(rewardTestName))
-                {
-                    Console.WriteLine($"{e.DisplayName} took a shield!");
-                    usersWithShield.Add(e.DisplayName);
-                }
-            }            
+            if (e.RewardTitle.Contains("Таймач самому себе"))
+            {
+                client.TimeoutUser(joinedChannel, e.DisplayName, TimeSpan.FromMinutes(10));
+            }
+            else if (e.RewardTitle.Contains("Таймач человеку снизу"))
+            {
+                timeoutUserBelowData.flag = true;
+                timeoutUserBelowData.num++;
+            }
+            else if (false && e.RewardTitle.Contains("Сдать дань"))
+            {
+                Console.WriteLine($"{e.DisplayName} took a shield!");
+                usersWithShield.Add(e.DisplayName);
+            }
         }
 
         void PubSub_OnPubSubServiceConnected(object sender, EventArgs e)
@@ -538,7 +529,7 @@ namespace NortagesTwitchBot
             const string spreadsheetId_Anon = "1IoXknFKw-f_FmMrxB9-ni5wgSg5JFCJSt0Gq06m1KEM";
 
             var chatters = TwitchHelpers.GetChatters(joinedChannel.Channel).Select(n => n.Username);
-                        
+
             var response = sheetsService.Spreadsheets.Values.Get(spreadsheetId_Anon, "A:A").Execute();
             var old_records = response.Values;
             var old_viewers = old_records != null ? old_records.Select(n => n.First().ToString()).ToList() : new List<string>();
@@ -550,7 +541,7 @@ namespace NortagesTwitchBot
                 upd_values.Add(new List<object> { viewer });
             }
 
-            ValueRange body = new ValueRange { Values = upd_values };            
+            ValueRange body = new ValueRange { Values = upd_values };
             sheetsService.Spreadsheets.Values.Clear(new ClearValuesRequest(), spreadsheetId_Anon, "A:A").Execute();
             var upd_request = sheetsService.Spreadsheets.Values.Update(body, spreadsheetId_Anon, "A1");
             upd_request.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
