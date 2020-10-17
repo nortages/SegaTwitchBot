@@ -89,7 +89,6 @@ namespace NortagesTwitchBot
             var isOnline = false;
             while (true)
             {
-                Thread.Sleep(TimeSpan.FromMinutes(5));
                 bool isTempOnline;
                 if (isOnline != (isTempOnline = TwitchHelpers.GetOnlineStatus(ChannelId)))
                 {
@@ -100,6 +99,7 @@ namespace NortagesTwitchBot
                         break;
                     }
                 }
+                Thread.Sleep(TimeSpan.FromMinutes(5));
             }
         }
 
@@ -412,7 +412,12 @@ namespace NortagesTwitchBot
             }
             else
             {
-                client.SendMessage(joinedChannel, $"{e.GiftedSubscription.DisplayName}, спасибо за подарочную подписку для {e.GiftedSubscription.MsgParamRecipientDisplayName}! peepoLove");
+                var answer = $"спасибо за подарочную подписку для {e.GiftedSubscription.MsgParamRecipientDisplayName}! peepoLove";
+                if (e.GiftedSubscription.MsgParamRecipientDisplayName.ToLower() == TwitchInfo.BotUsername.ToLower())
+                {
+                    answer = "спасибо большое за подписку мне kupaLove kupaLove kupaLove";
+                }
+                client.SendMessage(joinedChannel, $"{e.GiftedSubscription.DisplayName}, {answer}");
             }
 
             if (e.GiftedSubscription.IsAnonymous)
@@ -480,7 +485,7 @@ namespace NortagesTwitchBot
         {
             //client.SendMessage(joinedChannel, "Привет всем и хорошего стрима! peepoLove");
             Console.WriteLine("The stream just has started");
-            pubsub.Connect();
+            TwitchClientInitialize();
         }
 
         void PubSub_OnRewardRedeemed(object sender, OnRewardRedeemedArgs e)
