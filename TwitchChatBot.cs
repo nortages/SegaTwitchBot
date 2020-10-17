@@ -485,7 +485,7 @@ namespace NortagesTwitchBot
         {
             //client.SendMessage(joinedChannel, "Привет всем и хорошего стрима! peepoLove");
             Console.WriteLine("The stream just has started");
-            TwitchClientInitialize();
+            PubSubInitialize();
         }
 
         void PubSub_OnRewardRedeemed(object sender, OnRewardRedeemedArgs e)
