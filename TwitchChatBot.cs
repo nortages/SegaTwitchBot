@@ -192,12 +192,12 @@ namespace NortagesTwitchBot
 
         private void TimeoutUser(string username)
         {
-            Console.WriteLine($"{username} is banned on {TIMEOUTTIME} minutes!");
-            timeoutUserBelowData.flag = false;
-            timeoutUserBelowData.num = 0;
+            var timeoutTime = TimeSpan.FromTicks(TIMEOUTTIME.Ticks * timeoutUserBelowData.num);
+            client.TimeoutUser(joinedChannel, username, timeoutTime);
             timedoutByBot.Add(username.ToLower());
-            client.TimeoutUser(joinedChannel, username, TimeSpan.FromTicks(TIMEOUTTIME.Ticks * timeoutUserBelowData.num));
-            Task.Delay(TIMEOUTTIME).ContinueWith(t => timedoutByBot.Remove(username.ToLower()));
+            timeoutUserBelowData = (false, 0);
+            Console.WriteLine($"{username} is banned on {timeoutTime} minutes!");
+            Task.Delay(timeoutTime).ContinueWith(t => timedoutByBot.Remove(username.ToLower()));
         }
 
         #region TWITCH CLIENT SUBSCRIBERS
@@ -505,7 +505,6 @@ namespace NortagesTwitchBot
             if (e.RewardTitle.Contains("Таймач самому себе"))
             {
                 TimeoutUser(e.DisplayName);
-                client.TimeoutUser(joinedChannel, e.DisplayName, TimeSpan.FromMinutes(10));
             }
             else if (e.RewardTitle.Contains("Таймач человеку снизу"))
             {
