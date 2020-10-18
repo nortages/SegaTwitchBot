@@ -190,6 +190,16 @@ namespace NortagesTwitchBot
 
         #endregion Initialization
 
+        private void TimeoutUser(string username)
+        {
+            Console.WriteLine($"{username} is banned on {TIMEOUTTIME} minutes!");
+            timeoutUserBelowData.flag = false;
+            timeoutUserBelowData.num = 0;
+            timedoutByBot.Add(username.ToLower());
+            client.TimeoutUser(joinedChannel, username, TimeSpan.FromTicks(TIMEOUTTIME.Ticks * timeoutUserBelowData.num));
+            Task.Delay(TIMEOUTTIME).ContinueWith(t => timedoutByBot.Remove(username.ToLower()));
+        }
+
         #region TWITCH CLIENT SUBSCRIBERS
 
         private void Client_OnWhisperReceived(object sender, OnWhisperReceivedArgs e)
@@ -198,6 +208,7 @@ namespace NortagesTwitchBot
             if (TwitchHelpers.IsSubscribeToChannel(ChannelId, senderId, TwitchInfo.ChannelToken) && timedoutByBot.Contains(e.WhisperMessage.Username))
             {
                 client.SendMessage(joinedChannel, $"{e.WhisperMessage.Username} передаёт: {e.WhisperMessage.Message}");
+                timedoutByBot.Remove(e.WhisperMessage.Username);
             }
         }
 
@@ -273,12 +284,8 @@ namespace NortagesTwitchBot
                     usersWithShield.Remove(e.ChatMessage.DisplayName);
                     return;
                 }
-                client.TimeoutUser(joinedChannel, e.ChatMessage.DisplayName, TimeSpan.FromTicks(TIMEOUTTIME.Ticks * timeoutUserBelowData.num));
-                timeoutUserBelowData.flag = false;
-                timeoutUserBelowData.num = 0;
-                Console.WriteLine($"{e.ChatMessage.DisplayName} is banned on {TIMEOUTTIME} minutes!");
-                timedoutByBot.Add(e.ChatMessage.Username);
-                Task.Delay(TIMEOUTTIME).ContinueWith(t => timedoutByBot.Remove(e.ChatMessage.Username));
+                
+                TimeoutUser(e.ChatMessage.DisplayName);
                 return;
             }
 
@@ -497,6 +504,7 @@ namespace NortagesTwitchBot
 
             if (e.RewardTitle.Contains("Таймач самому себе"))
             {
+                TimeoutUser(e.DisplayName);
                 client.TimeoutUser(joinedChannel, e.DisplayName, TimeSpan.FromMinutes(10));
             }
             else if (e.RewardTitle.Contains("Таймач человеку снизу"))
