@@ -192,7 +192,9 @@ namespace NortagesTwitchBot
 
         private void TimeoutUser(string username)
         {
-            var timeoutTime = TimeSpan.FromTicks(TIMEOUTTIME.Ticks * timeoutUserBelowData.num);
+            var mult = 1;
+            if (timeoutUserBelowData.flag) mult = timeoutUserBelowData.num;
+            var timeoutTime = TimeSpan.FromTicks(TIMEOUTTIME.Ticks * mult);
             client.TimeoutUser(joinedChannel, username, timeoutTime);
             timedoutByBot.Add(username.ToLower());
             timeoutUserBelowData = (false, 0);
@@ -490,7 +492,6 @@ namespace NortagesTwitchBot
 
         void PubSub_OnStreamUp(object sender, OnStreamUpArgs e)
         {
-            //client.SendMessage(joinedChannel, "Привет всем и хорошего стрима! peepoLove");
             Console.WriteLine("The stream just has started");
             PubSubInitialize();
         }
