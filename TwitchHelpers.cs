@@ -16,6 +16,7 @@ using TwitchLib.Api.Helix.Models.Users;
 using TwitchLib.Api.ThirdParty.UsernameChange;
 using TwitchLib.Api.V5.Models.Channels;
 using TwitchLib.Client;
+using TwitchLib.Client.Models;
 
 namespace NortagesTwitchBot
 {
@@ -26,8 +27,8 @@ namespace NortagesTwitchBot
         static TwitchHelpers()
         {
             // TwitchAPI
-            twitchAPI.Settings.ClientId = TwitchInfo.ClientID;
-            twitchAPI.Settings.AccessToken = TwitchInfo.BotToken;
+            twitchAPI.Settings.ClientId = Config.ClientID;
+            twitchAPI.Settings.AccessToken = Config.BotToken;
             twitchAPI.Settings.Secret = "Twitch"; // Need to not hard code this
         }
 
@@ -40,7 +41,7 @@ namespace NortagesTwitchBot
             webClient.QueryString.Add("broadcaster_id", broadcasterId);
             webClient.QueryString.Add("user_id", userId);
             webClient.Headers.Add("Authorization", $"Bearer {accessToken}");
-            webClient.Headers.Add("Client-Id", TwitchInfo.ClientID);
+            webClient.Headers.Add("Client-Id", Config.ClientID);
 
             string result;
             try
@@ -57,6 +58,11 @@ namespace NortagesTwitchBot
             return jArray.Count != 0;
         }
 
+        public static void SendMessageWithDelay(this TwitchClient client, JoinedChannel channel, string message, TimeSpan delay)
+        {
+            Task.Delay(delay).ContinueWith(t => client.SendMessage(channel, message));
+        }
+
         public static void SendMessageWithDelay(this TwitchClient client, string channel, string message, TimeSpan delay)
         {
             Task.Delay(delay).ContinueWith(t => client.SendMessage(channel, message));
@@ -69,12 +75,12 @@ namespace NortagesTwitchBot
 
         public static Subscription[] GetSubscribers(string channelId)
         {
-            return twitchAPI.Helix.Subscriptions.GetBroadcasterSubscriptions(channelId, TwitchInfo.ClientID).Result.Data;
+            return twitchAPI.Helix.Subscriptions.GetBroadcasterSubscriptions(channelId, Config.ClientID).Result.Data;
         }
 
         public static TimeSpan? GetUpTime()
         {
-            string userId = GetUserId(TwitchInfo.ChannelName);
+            string userId = GetUserId(Config.ChannelName);
 
             if (userId == null || string.IsNullOrEmpty(userId))
                 return null;

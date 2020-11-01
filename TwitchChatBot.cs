@@ -37,7 +37,7 @@ namespace NortagesTwitchBot
         TwitchClient client;
         TwitchPubSub pubsub;
         SheetsService sheetsService;
-        readonly JoinedChannel joinedChannel = new JoinedChannel(TwitchInfo.ChannelName);
+        readonly JoinedChannel joinedChannel = new JoinedChannel(Config.ChannelName);
         readonly HttpClient HTTPClient = new HttpClient();
         readonly VkApi vkApi = new VkApi();
         readonly Random rand = new Random();
@@ -47,8 +47,10 @@ namespace NortagesTwitchBot
         string ChannelId;
         readonly List<string> timedoutByBot = new List<string>();
         int massGifts = 0;
+        bool isPubsubShutdown = false;
         readonly TimeSpan TIMEOUTTIME = TimeSpan.FromMinutes(10);
         const string OwnerUsername = "segatron_lapki";
+        private const string googleCredentialsPath = "credentials.json";
         (bool flag, int num) timeoutUserBelowData = (false, 0);
         (bool isHitBySnowball, string userName) hitBySnowballData = (false, null);
         readonly HashSet<string> usersWithShield = new HashSet<string>();
@@ -63,6 +65,8 @@ namespace NortagesTwitchBot
         readonly Regex regex_botCheck = new Regex(@"@NortagesBot (Жив|Живой|Тут|Здесь)\?", regexOptions);
         readonly Regex regex_botLox = new Regex(@"@NortagesBot (kupaLox|лох)", regexOptions);
         readonly Regex regex_botWorryStick = new Regex(@"@NortagesBot( worryStick)+", regexOptions);
+        readonly Regex regex_marko = new Regex(@"@NortagesBot марко", regexOptions);
+        readonly Regex regex_ping = new Regex(@"@NortagesBot ping", regexOptions);
 
         readonly Dictionary<string, string> GTAcodes = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("gta_codes.json"));
 
@@ -80,7 +84,7 @@ namespace NortagesTwitchBot
                 NavigateToModersPanel();
             }
 
-            ChannelId = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
+            ChannelId = TwitchHelpers.GetUserId(Config.ChannelName);
             CheckStreamerOnlineStatus();
         }
 
@@ -107,7 +111,7 @@ namespace NortagesTwitchBot
 
         void JSONBinInitialize()
         {
-            HTTPClient.DefaultRequestHeaders.Add("secret-key", TwitchInfo.JsonBinSecret);
+            HTTPClient.DefaultRequestHeaders.Add("secret-key", Config.JsonBinSecret);
             HTTPClient.DefaultRequestHeaders.Add("versioning", "false");
         }
 
@@ -123,16 +127,7 @@ namespace NortagesTwitchBot
         {
             GoogleCredential credential;
             string[] scopes = { SheetsService.Scope.Spreadsheets };
-            if (File.Exists("credentials.json"))
-            {
-                // Put your credentials json file in the root of the solution and make sure copy to output dir property is set to always copy 
-                using var stream = new FileStream("credentials.json", FileMode.Open, FileAccess.Read);
-                credential = GoogleCredential.FromStream(stream).CreateScoped(scopes);
-            }
-            else
-            {
-                credential = GoogleCredential.FromJson(Environment.GetEnvironmentVariable("credentials.json")).CreateScoped(scopes);
-            }
+            credential = GoogleCredential.FromJson(Config.GetGoogleCredJSON()).CreateScoped(scopes);
 
             // Create Google Sheets API service.
             sheetsService = new SheetsService(new BaseClientService.Initializer()
@@ -153,14 +148,14 @@ namespace NortagesTwitchBot
             pubsub.OnPubSubServiceClosed += Pubsub_OnPubSubServiceClosed;
             pubsub.OnPubSubServiceError += Pubsub_OnPubSubServiceError;
 
-            var channelID = TwitchHelpers.GetUserId(TwitchInfo.ChannelName);
+            var channelID = TwitchHelpers.GetUserId(Config.ChannelName);
             pubsub.ListenToRewards(channelID);
             pubsub.Connect();
         }
 
         void TwitchClientInitialize()
         {
-            ConnectionCredentials credentials = new ConnectionCredentials(TwitchInfo.BotUsername, TwitchInfo.BotToken);
+            ConnectionCredentials credentials = new ConnectionCredentials(Config.BotUsername, Config.BotToken);
             var clientOptions = new ClientOptions
             {
                 MessagesAllowedInPeriod = 100,
@@ -169,7 +164,7 @@ namespace NortagesTwitchBot
             };
             WebSocketClient customClient = new WebSocketClient(clientOptions);
             client = new TwitchClient(customClient);
-            client.Initialize(credentials, TwitchInfo.ChannelName);
+            client.Initialize(credentials, Config.ChannelName);
 
             //client.OnLog += Client_OnLog;
             client.OnChatCommandReceived += Client_OnChatCommandReceived;
@@ -207,7 +202,7 @@ namespace NortagesTwitchBot
         private void Client_OnWhisperReceived(object sender, OnWhisperReceivedArgs e)
         {
             var senderId = e.WhisperMessage.UserId;
-            if (TwitchHelpers.IsSubscribeToChannel(ChannelId, senderId, TwitchInfo.ChannelToken) && timedoutByBot.Contains(e.WhisperMessage.Username))
+            if (TwitchHelpers.IsSubscribeToChannel(ChannelId, senderId, Config.ChannelToken) && timedoutByBot.Contains(e.WhisperMessage.Username))
             {
                 client.SendMessage(joinedChannel, $"{e.WhisperMessage.Username} передаёт: {e.WhisperMessage.Message}");
                 timedoutByBot.Remove(e.WhisperMessage.Username);
@@ -229,7 +224,7 @@ namespace NortagesTwitchBot
                 //Commands.BansCommand(e);
             }
             else if (e.Command.CommandText == "снежок" &&
-                     e.Command.ArgumentsAsString.TrimStart('@') == TwitchInfo.BotUsername)
+                     e.Command.ArgumentsAsString.TrimStart('@') == Config.BotUsername)
             {
                 Console.WriteLine("Someone just throw a snowball to the bot!");
                 hitBySnowballData.isHitBySnowball = true;
@@ -296,6 +291,14 @@ namespace NortagesTwitchBot
             {
                 client.SendMessage(joinedChannel, "+");
             }
+            else if (regex_marko.IsMatch(e.ChatMessage.Message))
+            {
+                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} Поло");
+            }
+            else if (regex_ping.IsMatch(e.ChatMessage.Message))
+            {
+                client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} pong");
+            }
             else if (regex_hiToBot.IsMatch(e.ChatMessage.Message))
             {
                 client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} Привет MrDestructoid");
@@ -352,7 +355,7 @@ namespace NortagesTwitchBot
                 var snowballSender = hitBySnowballData.userName;
                 var commandCooldown = TimeSpan.FromSeconds(15);
                 var messageCooldown = TimeSpan.FromSeconds(5);
-                var botUsername = TwitchInfo.BotUsername.ToLower();
+                var botUsername = Config.BotUsername.ToLower();
                 if (message == $"Снежок прилетает прямо в {botUsername}, а {snowballSender}, задорно хохоча, скрывается с места преступления!")
                 {
                     client.SendMessageWithDelay(e.ChatMessage.Channel, snowballSender + " та за шо?(", messageCooldown);
@@ -422,7 +425,7 @@ namespace NortagesTwitchBot
             else
             {
                 var answer = $"спасибо за подарочную подписку для {e.GiftedSubscription.MsgParamRecipientDisplayName}! peepoLove";
-                if (e.GiftedSubscription.MsgParamRecipientDisplayName.ToLower() == TwitchInfo.BotUsername.ToLower())
+                if (e.GiftedSubscription.MsgParamRecipientDisplayName.ToLower() == Config.BotUsername.ToLower())
                 {
                     answer = "спасибо большое за подписку мне kupaLove kupaLove kupaLove";
                 }
@@ -443,6 +446,7 @@ namespace NortagesTwitchBot
         void Client_OnNewSubscriber(object sender, OnNewSubscriberArgs e)
         {
             client.SendMessage(joinedChannel, $"{e.Subscriber.DisplayName}, спасибо за подписку! bleedPurple Давайте сюда Ваш паспорт FBCatch kupaPasport");
+            client.SendMessageWithDelay(joinedChannel, "!саб", TimeSpan.FromSeconds(2));
         }
 
         void Client_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
@@ -524,7 +528,7 @@ namespace NortagesTwitchBot
             // SendTopics accepts an oauth optionally, which is necessary for some topics
             Console.WriteLine("PubSub Service is Connected");
 
-            pubsub.SendTopics(TwitchInfo.BotToken);
+            pubsub.SendTopics(Config.BotToken);
         }
 
         void PubSub_OnListenResponse(object sender, OnListenResponseArgs e)
@@ -659,10 +663,10 @@ namespace NortagesTwitchBot
         void SignInToTwitch(ChromeDriver driver)
         {
             var loginField = driver.FindElement(By.Id("login-username"), 5);
-            loginField.SendKeys(TwitchInfo.BotUsername);
+            loginField.SendKeys(Config.BotUsername);
 
             var passwordField = driver.FindElement(By.Id("password-input"));
-            passwordField.SendKeys(TwitchInfo.BotPassword);
+            passwordField.SendKeys(Config.BotPassword);
 
             var loginButton = driver.FindElement(By.XPath("//button[@data-a-target='passport-login-button']"));
             loginButton.Click();
@@ -697,8 +701,8 @@ namespace NortagesTwitchBot
             // the XOAUTH2 authentication mechanism.
             imapClient.AuthenticationMechanisms.Remove("XOAUTH2");
 
-            var login = TwitchInfo.GmailEmail;
-            var password = TwitchInfo.GmailPassword;
+            var login = Config.GmailEmail;
+            var password = Config.GmailPassword;
             imapClient.Authenticate(login, password);
 
             var inbox = imapClient.Inbox;
