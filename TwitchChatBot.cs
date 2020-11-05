@@ -92,6 +92,7 @@ namespace NortagesTwitchBot
 
         public static void SimpleListenerExample()
         {
+            Console.WriteLine(Environment.GetEnvironmentVariable("HEROKU_URL"));
             // URI prefixes are required            
             string prefix, host;
             int port;
