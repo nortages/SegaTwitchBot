@@ -98,6 +98,7 @@ namespace NortagesTwitchBot
             if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
                 port = int.Parse(Environment.GetEnvironmentVariable("PORT"));
+                Console.WriteLine("Port: " + port);
                 host = "nortages-twitch-bot.herokuapp.com";
                 prefix = $"https://nortages-twitch-bot.herokuapp.com:{port}/";
                 prefix = $"0.0.0.0:{port}/";
@@ -126,7 +127,8 @@ namespace NortagesTwitchBot
                 var hostEntry = Dns.GetHostEntry(host);
                 var IPAddressParsed = hostEntry.AddressList[0];
                 //var IPAddressParsed = IPAddress.Parse("0.0.0.0");
-                server = new TcpListener(IPAddressParsed, port);
+                //server = new TcpListener(IPAddressParsed, port);
+                server = new TcpListener(port);
                 server.Start();
             }
             
