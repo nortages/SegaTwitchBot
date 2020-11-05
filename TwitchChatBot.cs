@@ -16,6 +16,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -92,29 +93,39 @@ namespace NortagesTwitchBot
         public static void SimpleListenerExample()
         {
             // URI prefixes are required            
-            string prefix;
+            string prefix, host;
+            int port;
             if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
-                var port = Environment.GetEnvironmentVariable("PORT");
+                port = int.Parse(Environment.GetEnvironmentVariable("PORT"));
+                host = "nortages-twitch-bot.herokuapp.com";
                 prefix = $"https://nortages-twitch-bot.herokuapp.com:{port}/";
             }
             else
             {
-                prefix = $"https://127.0.0.1:5000/";
+                port = 5000;
+                host = "localhost";
+                prefix = $"https://127.0.0.1:{port}/";
             }
 
-            // Create a listener.   
-            HttpListener listener = new HttpListener();
+            // Create a listener.
+            var hostEntry = Dns.GetHostEntry(host);
+            var IPAddress = hostEntry.AddressList[0];
+            var server = new TcpListener(IPAddress, port);
             // Add the prefix.
-            listener.Prefixes.Add(prefix);
-
-            listener.Start();
+            //listener.Prefixes.Add(prefix);
+            server.Start();
             Console.WriteLine("Listening for HTTP requests...");
             while (true)
             {
                 // The GetContext method blocks while waiting for a request.
-                HttpListenerContext context = listener.GetContext();
-                HttpListenerRequest request = context.Request;
+                var client = server.AcceptTcpClient();
+                Console.WriteLine("A new HTTP request!");
+                continue;
+                HttpListenerContext context = null;
+                //HttpListenerContext context = listener.GetContext();
+                HttpListenerRequest request = null;
+                //HttpListenerRequest request = context.Request;
 
                 // Obtain a response object.
                 HttpListenerResponse response = context.Response;
@@ -138,7 +149,7 @@ namespace NortagesTwitchBot
                 output.Write(buffer, 0, buffer.Length); 
                 output.Close();
             }
-            listener.Stop();
+            server.Stop();
             // You must close the output stream.
         }
 
