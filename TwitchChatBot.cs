@@ -93,7 +93,6 @@ namespace NortagesTwitchBot
 
         public static void SimpleListenerExample()
         {
-            Console.WriteLine(Environment.GetEnvironmentVariable("HEROKU_URL"));
             // URI prefixes are required
             string prefix, host;
             int port;
@@ -109,7 +108,7 @@ namespace NortagesTwitchBot
             {
                 port = 5000;
                 host = "localhost";
-                prefix = $"http://127.0.0.1:{port}/";
+                prefix = $"https://127.0.0.1:{port}/";
             }
 
             var useHttpListener = true;
@@ -386,15 +385,16 @@ namespace NortagesTwitchBot
             }
             else if (regex_mew.IsMatch(e.ChatMessage.Message))
             {
-                if (rand.Next(0, 1) == 1)
+                var num = rand.Next(1, 5);
+                if (rand.Next(0, 10) > 4)
                 {
-                    var num = rand.Next(1, 5);
                     var result = string.Concat(Enumerable.Repeat("я", num));
                     client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} м{result}у");
                 }
                 else
                 {
-                    client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} мурр");
+                    var result = string.Concat(Enumerable.Repeat("р", num));
+                    client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} му{result}");
                 }
             }
             else if (regex_ping.IsMatch(e.ChatMessage.Message))
