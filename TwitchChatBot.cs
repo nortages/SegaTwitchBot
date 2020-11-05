@@ -61,12 +61,13 @@ namespace NortagesTwitchBot
         static readonly RegexOptions regexOptions = RegexOptions.Compiled | RegexOptions.IgnoreCase;
         readonly Regex regex_trimEndFromQuyaBot = new Regex(@"\[\d\]", regexOptions);
         readonly Regex regex_botsPlusToChat = new Regex(@".*?Боты?,? \+ в ча[тй].*", regexOptions);
-        readonly Regex regex_hiToBot = new Regex(@".+?NortagesBot.+?(Привет|Здравствуй|Даров|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|Q{1,2}).*", regexOptions);
-        readonly Regex regex_botCheck = new Regex(@"@NortagesBot (Жив|Живой|Тут|Здесь)\?", regexOptions);
-        readonly Regex regex_botLox = new Regex(@"@NortagesBot (kupaLox|лох)", regexOptions);
-        readonly Regex regex_botWorryStick = new Regex(@"@NortagesBot( worryStick)+", regexOptions);
-        readonly Regex regex_marko = new Regex(@"@NortagesBot марко", regexOptions);
-        readonly Regex regex_ping = new Regex(@"@NortagesBot ping", regexOptions);
+        readonly Regex regex_hiToBot = new Regex(@".+?NortagesBot,?.+?(Привет|Здравствуй|Даров|kupaSubHype|kupaPrivet|KonCha|VoHiYo|PrideToucan|HeyGuys|basilaHi|Q{1,2}).*", regexOptions);
+        readonly Regex regex_botCheck = new Regex(@"@NortagesBot,? (Жив|Живой|Тут|Здесь)\?", regexOptions);
+        readonly Regex regex_botLox = new Regex(@"@NortagesBot,? (kupaLox|лох)", regexOptions);
+        readonly Regex regex_botWorryStick = new Regex(@"@NortagesBot,?( worryStick)+", regexOptions);
+        readonly Regex regex_marko = new Regex(@"@NortagesBot,? марко", regexOptions);
+        readonly Regex regex_ping = new Regex(@"@NortagesBot,? ping", regexOptions);
+        readonly Regex regex_mew = new Regex(@"@NortagesBot,? (мя+у|мур+)", regexOptions);
 
         readonly Dictionary<string, string> GTAcodes = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("gta_codes.json"));
 
@@ -93,7 +94,7 @@ namespace NortagesTwitchBot
         public static void SimpleListenerExample()
         {
             Console.WriteLine(Environment.GetEnvironmentVariable("HEROKU_URL"));
-            // URI prefixes are required            
+            // URI prefixes are required
             string prefix, host;
             int port;
             if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
@@ -102,17 +103,16 @@ namespace NortagesTwitchBot
                 Console.WriteLine("Port: " + port);
                 host = "nortages-twitch-bot.herokuapp.com";
                 prefix = $"https://nortages-twitch-bot.herokuapp.com:{port}/";
-                prefix = $"0.0.0.0:{port}/";
+                prefix = $"https://*:{port}/";
             }
             else
             {
                 port = 5000;
                 host = "localhost";
                 prefix = $"http://127.0.0.1:{port}/";
-                //prefix = $"http://0.0.0.0:{port}/";
             }
 
-            var useHttpListener = false;
+            var useHttpListener = true;
             HttpListener listener = null;
             TcpListener server = null;
             if (useHttpListener)
@@ -383,6 +383,19 @@ namespace NortagesTwitchBot
             else if (regex_marko.IsMatch(e.ChatMessage.Message))
             {
                 client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} Поло");
+            }
+            else if (regex_mew.IsMatch(e.ChatMessage.Message))
+            {
+                if (rand.Next(0, 1) == 1)
+                {
+                    var num = rand.Next(1, 5);
+                    var result = string.Concat(Enumerable.Repeat("я", num));
+                    client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} м{result}у");
+                }
+                else
+                {
+                    client.SendMessage(joinedChannel, $"{e.ChatMessage.DisplayName} мурр");
+                }
             }
             else if (regex_ping.IsMatch(e.ChatMessage.Message))
             {
