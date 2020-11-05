@@ -89,7 +89,6 @@ namespace NortagesTwitchBot
             CheckStreamerOnlineStatus();
         }
 
-        // This example requires the System and System.Net namespaces.
         public static void SimpleListenerExample()
         {
             // URI prefixes are required            
@@ -97,12 +96,11 @@ namespace NortagesTwitchBot
             if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
                 var port = Environment.GetEnvironmentVariable("PORT");
-                Console.WriteLine(port);
                 prefix = $"https://nortages-twitch-bot.herokuapp.com:{port}/";
             }
             else
             {
-                prefix = $"http://127.0.0.1:5000/";
+                prefix = $"https://127.0.0.1:5000/";
             }
 
             // Create a listener.   
@@ -144,7 +142,7 @@ namespace NortagesTwitchBot
             // You must close the output stream.
         }
 
-            void CheckStreamerOnlineStatus()
+        void CheckStreamerOnlineStatus()
         {
             var isOnline = false;
             while (true)
@@ -329,16 +327,6 @@ namespace NortagesTwitchBot
 
         void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
-            foreach (var item in e.ChatMessage.Badges)
-            {
-                Console.WriteLine($"{item.Key} - {item.Value}");
-            }
-            Console.WriteLine("----");
-            foreach (var item in e.ChatMessage.BadgeInfo)
-            {
-                Console.WriteLine($"{item.Key} - {item.Value}");
-            }
-
             if (timeoutUserBelowData.flag && !e.ChatMessage.IsModerator && !e.ChatMessage.IsBroadcaster)
             {
                 if (usersWithShield.Contains(e.ChatMessage.DisplayName))
@@ -476,11 +464,6 @@ namespace NortagesTwitchBot
             {
                 client.SendMessage(joinedChannel, $"{e.GiftedSubscription.DisplayName}, спасибо за подарочные подписки! peepoLove peepoLove peepoLove");
             }
-
-            if (e.GiftedSubscription.IsAnonymous)
-            {
-                FindAnonymousGifter();
-            }
         }
 
         void Client_OnGiftedSubscription(object sender, OnGiftedSubscriptionArgs e)
@@ -497,11 +480,6 @@ namespace NortagesTwitchBot
                     answer = "спасибо большое за подписку мне kupaLove kupaLove kupaLove";
                 }
                 client.SendMessage(joinedChannel, $"{e.GiftedSubscription.DisplayName}, {answer}");
-            }
-
-            if (e.GiftedSubscription.IsAnonymous)
-            {
-                FindAnonymousGifter();
             }
         }
 

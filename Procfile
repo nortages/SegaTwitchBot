@@ -1,1 +1,1 @@
-worker: cd $HOME/heroku_output && ./NortagesTwitchBot
+web: cd $HOME/heroku_output && ./NortagesTwitchBot
