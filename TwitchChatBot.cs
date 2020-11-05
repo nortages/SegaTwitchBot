@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -47,10 +48,8 @@ namespace NortagesTwitchBot
         string ChannelId;
         readonly List<string> timedoutByBot = new List<string>();
         int massGifts = 0;
-        bool isPubsubShutdown = false;
         readonly TimeSpan TIMEOUTTIME = TimeSpan.FromMinutes(10);
         const string OwnerUsername = "segatron_lapki";
-        private const string googleCredentialsPath = "credentials.json";
         (bool flag, int num) timeoutUserBelowData = (false, 0);
         (bool isHitBySnowball, string userName) hitBySnowballData = (false, null);
         readonly HashSet<string> usersWithShield = new HashSet<string>();
@@ -72,6 +71,8 @@ namespace NortagesTwitchBot
 
         public void Connect()
         {
+            new Task(SimpleListenerExample).Start();
+
             TwitchClientInitialize();
             PubSubInitialize();
 
@@ -88,7 +89,69 @@ namespace NortagesTwitchBot
             CheckStreamerOnlineStatus();
         }
 
-        void CheckStreamerOnlineStatus()
+        // This example requires the System and System.Net namespaces.
+        public static void SimpleListenerExample()
+        {
+            if (!HttpListener.IsSupported)
+            {
+                Console.WriteLine("Windows XP SP2 or Server 2003 is required to use the HttpListener class.");
+                return;
+            }
+            // URI prefixes are required,
+            // for example "http://contoso.com:8080/index/".
+            
+            string prefix;
+            if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
+            {
+                var port = Environment.GetEnvironmentVariable("PORT");
+                prefix = $"https://nortages-twitch-bot.herokuapp.com:{port}/";
+            }
+            else
+            {
+                prefix = $"http://127.0.0.1:5000/";
+            }
+
+            // Create a listener.
+            HttpListener listener = new HttpListener();
+            // Add the prefix.
+            listener.Prefixes.Add(prefix);
+
+            listener.Start();
+            Console.WriteLine("Listening for HTTP requests...");
+            while (true)
+            {
+                // The GetContext method blocks while waiting for a request.
+                HttpListenerContext context = listener.GetContext();
+                HttpListenerRequest request = context.Request;
+                Console.WriteLine(request.HttpMethod);
+
+                // Obtain a response object.
+                HttpListenerResponse response = context.Response;
+                response.Headers.Add("Access-Control-Allow-Origin", "https://www.twitch.tv");
+                response.Headers.Add("Access-Control-Allow-Credentials", "true");
+                response.Headers.Add("Access-Control-Allow-Methods", "GET");
+                response.Headers.Add("Access-Control-Allow-Headers", "Access-Control-Allow-Origin");
+
+                // Construct a response.
+                string responseString = "";
+                if (request.HttpMethod != "OPTIONS")
+                {
+                    Console.WriteLine("A new HTTP request!");
+                    responseString = "<HTML><BODY> Hello world!</BODY></HTML>";
+                }
+                byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
+
+                // Get a response stream and write the response to it.
+                response.ContentLength64 = buffer.Length;
+                Stream output = response.OutputStream;
+                output.Write(buffer, 0, buffer.Length); 
+                output.Close();
+            }
+            listener.Stop();
+            // You must close the output stream.
+        }
+
+            void CheckStreamerOnlineStatus()
         {
             var isOnline = false;
             while (true)
@@ -164,6 +227,7 @@ namespace NortagesTwitchBot
             };
             WebSocketClient customClient = new WebSocketClient(clientOptions);
             client = new TwitchClient(customClient);
+            //client.Initialize(credentials, OwnerUsername);
             client.Initialize(credentials, Config.ChannelName);
 
             //client.OnLog += Client_OnLog;
@@ -272,6 +336,16 @@ namespace NortagesTwitchBot
 
         void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
+            foreach (var item in e.ChatMessage.Badges)
+            {
+                Console.WriteLine($"{item.Key} - {item.Value}");
+            }
+            Console.WriteLine("----");
+            foreach (var item in e.ChatMessage.BadgeInfo)
+            {
+                Console.WriteLine($"{item.Key} - {item.Value}");
+            }
+
             if (timeoutUserBelowData.flag && !e.ChatMessage.IsModerator && !e.ChatMessage.IsBroadcaster)
             {
                 if (usersWithShield.Contains(e.ChatMessage.DisplayName))
