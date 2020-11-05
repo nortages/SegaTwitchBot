@@ -92,18 +92,12 @@ namespace NortagesTwitchBot
         // This example requires the System and System.Net namespaces.
         public static void SimpleListenerExample()
         {
-            if (!HttpListener.IsSupported)
-            {
-                Console.WriteLine("Windows XP SP2 or Server 2003 is required to use the HttpListener class.");
-                return;
-            }
-            // URI prefixes are required,
-            // for example "http://contoso.com:8080/index/".
-            
+            // URI prefixes are required            
             string prefix;
             if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
                 var port = Environment.GetEnvironmentVariable("PORT");
+                Console.WriteLine(port);
                 prefix = $"https://nortages-twitch-bot.herokuapp.com:{port}/";
             }
             else
@@ -111,7 +105,7 @@ namespace NortagesTwitchBot
                 prefix = $"http://127.0.0.1:5000/";
             }
 
-            // Create a listener.
+            // Create a listener.   
             HttpListener listener = new HttpListener();
             // Add the prefix.
             listener.Prefixes.Add(prefix);
@@ -123,7 +117,6 @@ namespace NortagesTwitchBot
                 // The GetContext method blocks while waiting for a request.
                 HttpListenerContext context = listener.GetContext();
                 HttpListenerRequest request = context.Request;
-                Console.WriteLine(request.HttpMethod);
 
                 // Obtain a response object.
                 HttpListenerResponse response = context.Response;
