@@ -100,54 +100,74 @@ namespace NortagesTwitchBot
                 port = int.Parse(Environment.GetEnvironmentVariable("PORT"));
                 host = "nortages-twitch-bot.herokuapp.com";
                 prefix = $"https://nortages-twitch-bot.herokuapp.com:{port}/";
+                prefix = $"0.0.0.0:{port}/";
             }
             else
             {
                 port = 5000;
                 host = "localhost";
-                prefix = $"https://127.0.0.1:{port}/";
+                prefix = $"http://127.0.0.1:{port}/";
+                //prefix = $"http://0.0.0.0:{port}/";
             }
 
-            // Create a listener.
-            var hostEntry = Dns.GetHostEntry(host);
-            var IPAddress = hostEntry.AddressList[0];
-            var server = new TcpListener(IPAddress, port);
-            // Add the prefix.
-            //listener.Prefixes.Add(prefix);
-            server.Start();
+            var useHttpListener = false;
+            HttpListener listener = null;
+            TcpListener server = null;
+            if (useHttpListener)
+            {
+                // Create a listener.
+                listener = new HttpListener();
+                // Add the prefix.
+                listener.Prefixes.Add(prefix);
+                listener.Start();
+            }
+            else
+            {
+                var hostEntry = Dns.GetHostEntry(host);
+                var IPAddressParsed = hostEntry.AddressList[0];
+                //var IPAddressParsed = IPAddress.Parse("0.0.0.0");
+                server = new TcpListener(IPAddressParsed, port);
+                server.Start();
+            }
+            
             Console.WriteLine("Listening for HTTP requests...");
             while (true)
             {
-                // The GetContext method blocks while waiting for a request.
-                var client = server.AcceptTcpClient();
-                Console.WriteLine("A new HTTP request!");
-                continue;
-                HttpListenerContext context = null;
-                //HttpListenerContext context = listener.GetContext();
-                HttpListenerRequest request = null;
-                //HttpListenerRequest request = context.Request;
-
-                // Obtain a response object.
-                HttpListenerResponse response = context.Response;
-                response.Headers.Add("Access-Control-Allow-Origin", "https://www.twitch.tv");
-                response.Headers.Add("Access-Control-Allow-Credentials", "true");
-                response.Headers.Add("Access-Control-Allow-Methods", "GET");
-                response.Headers.Add("Access-Control-Allow-Headers", "Access-Control-Allow-Origin");
-
-                // Construct a response.
-                string responseString = "";
-                if (request.HttpMethod != "OPTIONS")
+                if (useHttpListener)
                 {
-                    Console.WriteLine("A new HTTP request!");
-                    responseString = "<HTML><BODY> Hello world!</BODY></HTML>";
-                }
-                byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
+                    var context = listener.GetContext();
+                    var request = context.Request;
 
-                // Get a response stream and write the response to it.
-                response.ContentLength64 = buffer.Length;
-                Stream output = response.OutputStream;
-                output.Write(buffer, 0, buffer.Length); 
-                output.Close();
+                    // Obtain a response object.
+                    var response = context.Response;
+                    response.Headers.Add("Access-Control-Allow-Origin", "https://www.twitch.tv");
+                    response.Headers.Add("Access-Control-Allow-Credentials", "true");
+                    response.Headers.Add("Access-Control-Allow-Methods", "GET");
+                    response.Headers.Add("Access-Control-Allow-Headers", "Access-Control-Allow-Origin");
+
+                    // Construct a response.
+                    string responseString = "";
+                    if (request.HttpMethod != "OPTIONS")
+                    {
+                        Console.WriteLine("A new HTTP request!");
+                        responseString = "<HTML><BODY> Hello world!</BODY></HTML>";
+                    }
+                    byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
+
+                    // Get a response stream and write the response to it.
+                    response.ContentLength64 = buffer.Length;
+                    Stream output = response.OutputStream;
+                    output.Write(buffer, 0, buffer.Length);
+                    output.Close();
+
+                    Console.WriteLine("A new HTTP request!");
+                }
+                else
+                {
+                    var client = server.AcceptTcpClient();
+                    Console.WriteLine("A new HTTP request!");
+                }
+                
             }
             server.Stop();
             // You must close the output stream.
