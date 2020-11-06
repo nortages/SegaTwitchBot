@@ -182,11 +182,12 @@ namespace NortagesTwitchBot
                     Console.WriteLine("Response string: " + responseString);
 
                     // Send back a response.
-                    client.Send(Encoding.UTF8.GetBytes("HTTP/1.0 200 OK"));
-                    Console.WriteLine("First header was sent");
-                    client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
-                    client.Send(Encoding.UTF8.GetBytes("Content-Type: text/plain; charset=UTF-8"));
-                    Console.WriteLine("Second header was sent");
+                    var i =client.Send(Encoding.UTF8.GetBytes("HTTP/1.0 200 OK"));
+                    Console.WriteLine("First header was sent, " + i);
+                    i = client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
+                    Console.WriteLine("The new line was sent, " + i);
+                    i =client.Send(Encoding.UTF8.GetBytes("Content-Type: text/plain; charset=UTF-8"));
+                    Console.WriteLine("Second header was sent, " + i);
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
                     client.Send(Encoding.UTF8.GetBytes("Content-Length: " + responseString.Length));
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
