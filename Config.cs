@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using Newtonsoft.Json;
+using Org.BouncyCastle.Crypto.Tls;
 
 namespace NortagesTwitchBot
 {
@@ -38,7 +39,9 @@ namespace NortagesTwitchBot
 
             var url = $"{apiUrl}{id}";
 
-            var request = WebRequest.Create(url);
+
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            //var request = WebRequest.Create(url);
             request.Headers.Add("Api-key", apiKey);
             request.Headers.Add("Security-key", securityKey);
             var response = request.GetResponse();

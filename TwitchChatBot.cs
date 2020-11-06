@@ -94,24 +94,26 @@ namespace NortagesTwitchBot
         public static void SimpleListenerExample()
         {
             // URI prefixes are required
-            string prefix, host;
+            string prefix1, prefix2, host;
             int port;
             if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
                 port = int.Parse(Environment.GetEnvironmentVariable("PORT"));
                 Console.WriteLine("Port: " + port);
                 host = "nortages-twitch-bot.herokuapp.com";
-                prefix = $"https://nortages-twitch-bot.herokuapp.com:{port}/";
-                prefix = $"https://*:{port}/";
+                //prefix = $"https://nortages-twitch-bot.herokuapp.com:{port}/";
+                prefix1 = $"http://*:{port}/";
+                prefix2 = $"https://*:{port}/";
             }
             else
             {
                 port = 5000;
                 host = "localhost";
-                prefix = $"https://127.0.0.1:{port}/";
+                prefix1 = $"http://127.0.0.1:{port}/";
+                prefix2 = $"https://127.0.0.1:{port}/";
             }
 
-            var useHttpListener = true;
+            var useHttpListener = false;
             HttpListener listener = null;
             TcpListener server = null;
             if (useHttpListener)
@@ -119,7 +121,8 @@ namespace NortagesTwitchBot
                 // Create a listener.
                 listener = new HttpListener();
                 // Add the prefix.
-                listener.Prefixes.Add(prefix);
+                listener.Prefixes.Add(prefix1);
+                listener.Prefixes.Add(prefix2);
                 listener.Start();
             }
             else
