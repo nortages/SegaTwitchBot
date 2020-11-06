@@ -171,19 +171,22 @@ namespace NortagesTwitchBot
                     //var client = server.AcceptTcpClient();
                     var client = server.AcceptSocket();
                     client.LingerState = new LingerOption(true, 10);
+                    client.Ttl = 10;
                     Console.WriteLine("A new HTTP request from TcpListener!");
                     Console.WriteLine("Client connected: {0}\r\n", client.RemoteEndPoint);
 
-                    int i;
                     // Get a stream object for reading and writing
                     //var stream = client.GetStream();
                     //var writer = new StreamWriter(client.GetStream());
                     var responseString = Environment.GetEnvironmentVariable("RESPONSE") ?? "Hello world";
+                    Console.WriteLine("Response string: " + responseString);
 
                     // Send back a response.
                     client.Send(Encoding.UTF8.GetBytes("HTTP/1.0 200 OK"));
+                    Console.WriteLine("First header was sent");
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
                     client.Send(Encoding.UTF8.GetBytes("Content-Type: text/plain; charset=UTF-8"));
+                    Console.WriteLine("Second header was sent");
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
                     client.Send(Encoding.UTF8.GetBytes("Content-Length: " + responseString.Length));
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
@@ -194,15 +197,17 @@ namespace NortagesTwitchBot
                     client.Send(Encoding.UTF8.GetBytes("Access-Control-Allow-Methods: GET"));
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
                     client.Send(Encoding.UTF8.GetBytes("Access-Control-Allow-Headers: Access-Control-Allow-Origin"));
+                    Console.WriteLine("All headers were sent");
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
                     client.Send(Encoding.UTF8.GetBytes(responseString));
+                    Console.WriteLine("The response string was sent");
 
                     //writer.Flush();
                     //client.Send(responseBytes);
                     //stream.Close();
                     client.Close();
-                    Console.WriteLine("Sent: {0}", responseString);
+                    Console.WriteLine("The client socket was closed");
                 }
 
             }
