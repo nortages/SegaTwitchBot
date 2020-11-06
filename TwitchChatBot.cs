@@ -74,14 +74,14 @@ namespace NortagesTwitchBot
 
         public void Connect()
         {
-            new Task(SimpleListenerExample).Start();
-
             TwitchClientInitialize();
             PubSubInitialize();
 
             //VKApiInitialize();
             //JSONBinInitialize();
-            GoogleSheetsServiceInitialize();
+            //GoogleSheetsServiceInitialize();
+            
+            new Task(SimpleListenerExample).Start();
 
             if (false && Environment.GetEnvironmentVariable("DEPLOYED") != null)
             {
