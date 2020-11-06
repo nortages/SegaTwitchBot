@@ -100,10 +100,11 @@ namespace NortagesTwitchBot
             {
                 port = int.Parse(Environment.GetEnvironmentVariable("PORT"));
                 Console.WriteLine("Port: " + port);
-                host = "nortages-twitch-bot.herokuapp.com";
+                //host = "nortages-twitch-bot.herokuapp.com";
+                host = Environment.GetEnvironmentVariable("HOST");
                 //prefix = $"https://nortages-twitch-bot.herokuapp.com:{port}/";
-                prefix1 = $"http://*:{port}/";
-                prefix2 = $"https://*:{port}/";
+                prefix1 = $"http://{host}:{port}/";
+                prefix2 = $"https://{host}:{port}/";
             }
             else
             {
@@ -112,8 +113,7 @@ namespace NortagesTwitchBot
                 prefix1 = $"http://127.0.0.1:{port}/";
                 prefix2 = $"https://127.0.0.1:{port}/";
             }
-
-            var useHttpListener = true;
+            var useHttpListener = Environment.GetEnvironmentVariable("UseHttpListener") == "true";
             HttpListener listener = null;
             TcpListener server = null;
             if (useHttpListener)
@@ -127,9 +127,9 @@ namespace NortagesTwitchBot
             }
             else
             {
-                var hostEntry = Dns.GetHostEntry(host);
-                var IPAddressParsed = hostEntry.AddressList[0];
-                //var IPAddressParsed = IPAddress.Parse("0.0.0.0");
+                //var hostEntry = Dns.GetHostEntry(host);
+                //var IPAddressParsed = hostEntry.AddressList[0];
+                var IPAddressParsed = IPAddress.Parse(host);
                 //server = new TcpListener(IPAddressParsed, port);
                 server = new TcpListener(IPAddressParsed, port);
                 server.Start();
@@ -169,13 +169,12 @@ namespace NortagesTwitchBot
                     output.Write(buffer, 0, buffer.Length);
                     output.Close();
 
-                    Console.WriteLine("A new HTTP request!");
+                    Console.WriteLine("A new HTTP request from HttpListener!");
                 }
                 else
                 {
                     var client = server.AcceptTcpClient();
-                    Console.WriteLine("Connected!");
-                    Console.WriteLine("A new HTTP request!");
+                    Console.WriteLine("A new HTTP request from TcpListener!");
 
                     data = null;
                     int i;
@@ -191,15 +190,13 @@ namespace NortagesTwitchBot
                         // Process the data sent by the client.
                         data = data.ToUpper();
 
-                        byte[] msg = System.Text.Encoding.ASCII.GetBytes(data);
-
-                        
+                        //byte[] msg = System.Text.Encoding.ASCII.GetBytes(data);
                     }
                     var responseString = "<HTML><BODY> Hello world!</BODY></HTML>";
                     // Send back a response.
                     var responseBytes = System.Text.Encoding.ASCII.GetBytes(responseString);
                     stream.Write(responseBytes, 0, responseBytes.Length);
-                    Console.WriteLine("Sent: {0}", data);
+                    Console.WriteLine("Sent: {0}", responseString);
                 }
 
             }
