@@ -158,7 +158,7 @@ namespace NortagesTwitchBot
                     {
                         Console.WriteLine("A new HTTP options request from HttpListener!");
                     }
-                    byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
+                    byte[] buffer = Encoding.UTF8.GetBytes(responseString);
 
                     // Get a response stream and write the response to it.
                     response.ContentLength64 = buffer.Length;
@@ -175,6 +175,18 @@ namespace NortagesTwitchBot
                     Console.WriteLine("A new HTTP request from TcpListener!");
                     Console.WriteLine("Client connected: {0}\r\n", client.RemoteEndPoint);
 
+                    byte[] buffer = new byte[1024];
+                    int receivelength = client.Receive(buffer, 1024, SocketFlags.None);
+                    string requeststring = Encoding.UTF8.GetString(buffer, 0, receivelength);
+                    if (!requeststring.Contains(Environment.GetEnvironmentVariable("SECRET")))
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Request: " + requeststring);
+                    }
+
                     // Get a stream object for reading and writing
                     //var stream = client.GetStream();
                     //var writer = new StreamWriter(client.GetStream());
@@ -182,11 +194,11 @@ namespace NortagesTwitchBot
                     Console.WriteLine("Response string: " + responseString);
 
                     // Send back a response.
-                    var i =client.Send(Encoding.UTF8.GetBytes("HTTP/1.0 200 OK"));
+                    var i = client.Send(Encoding.UTF8.GetBytes("HTTP/1.0 200 OK"));
                     Console.WriteLine("First header was sent, " + i);
                     i = client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
                     Console.WriteLine("The new line was sent, " + i);
-                    i =client.Send(Encoding.UTF8.GetBytes("Content-Type: text/plain; charset=UTF-8"));
+                    i = client.Send(Encoding.UTF8.GetBytes("Content-Type: text/plain; charset=UTF-8"));
                     Console.WriteLine("Second header was sent, " + i);
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
                     client.Send(Encoding.UTF8.GetBytes("Content-Length: " + responseString.Length));
