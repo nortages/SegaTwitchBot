@@ -39,9 +39,7 @@ namespace NortagesTwitchBot
 
             var url = $"{apiUrl}{id}";
 
-
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-            //var request = WebRequest.Create(url);
+            var request = WebRequest.Create(url);
             request.Headers.Add("Api-key", apiKey);
             request.Headers.Add("Security-key", securityKey);
             var response = request.GetResponse();
