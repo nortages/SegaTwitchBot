@@ -175,18 +175,20 @@ namespace NortagesTwitchBot
                 }
                 else
                 {
-                    var client = server.AcceptTcpClient();
+                    //var client = server.AcceptTcpClient();
+                    var client = server.AcceptSocket();
                     Console.WriteLine("A new HTTP request from TcpListener!");
 
                     data = null;
                     int i;
                     // Get a stream object for reading and writing
-                    var stream = client.GetStream();
+                    //var stream = client.GetStream();
                     var responseString = Environment.GetEnvironmentVariable("RESPONSE"); ;
                     // Send back a response.
                     var responseBytes = System.Text.Encoding.ASCII.GetBytes(responseString);
-                    stream.Write(responseBytes, 0, responseBytes.Length);
-                    stream.Close();
+                    //stream.Write(responseBytes, 0, responseBytes.Length);
+                    client.Send(responseBytes);
+                    //stream.Close();
                     client.Close();
                     Console.WriteLine("Sent: {0}", responseString);
                 }
