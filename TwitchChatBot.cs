@@ -181,17 +181,17 @@ namespace NortagesTwitchBot
                     // Get a stream object for reading and writing
                     var stream = client.GetStream();
                     // Loop to receive all the data sent by the client.
-                    while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
-                    {
-                        // Translate data bytes to a ASCII string.
-                        data = System.Text.Encoding.ASCII.GetString(bytes, 0, i);
-                        Console.WriteLine("Received: {0}", data);
+                    //while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
+                    //{
+                    //    // Translate data bytes to a ASCII string.
+                    //    data = System.Text.Encoding.ASCII.GetString(bytes, 0, i);
+                    //    Console.WriteLine("Received: {0}", data);
 
-                        // Process the data sent by the client.
-                        data = data.ToUpper();
+                    //    // Process the data sent by the client.
+                    //    data = data.ToUpper();
 
-                        //byte[] msg = System.Text.Encoding.ASCII.GetBytes(data);
-                    }
+                    //    //byte[] msg = System.Text.Encoding.ASCII.GetBytes(data);
+                    //}
                     var responseString = "<HTML><BODY> Hello world!</BODY></HTML>";
                     // Send back a response.
                     var responseBytes = System.Text.Encoding.ASCII.GetBytes(responseString);
