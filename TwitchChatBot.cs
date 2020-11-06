@@ -158,8 +158,12 @@ namespace NortagesTwitchBot
                     string responseString = "";
                     if (request.HttpMethod != "OPTIONS")
                     {
-                        Console.WriteLine("A new HTTP request!");
-                        responseString = "<HTML><BODY> Hello world!</BODY></HTML>";
+                        Console.WriteLine("A new HTTP request from HttpListener!");
+                        responseString = Environment.GetEnvironmentVariable("RESPONSE");
+                    }
+                    else
+                    {
+                        Console.WriteLine("A new HTTP options request from HttpListener!");
                     }
                     byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
 
@@ -168,8 +172,6 @@ namespace NortagesTwitchBot
                     Stream output = response.OutputStream;
                     output.Write(buffer, 0, buffer.Length);
                     output.Close();
-
-                    Console.WriteLine("A new HTTP request from HttpListener!");
                 }
                 else
                 {
@@ -180,19 +182,7 @@ namespace NortagesTwitchBot
                     int i;
                     // Get a stream object for reading and writing
                     var stream = client.GetStream();
-                    // Loop to receive all the data sent by the client.
-                    //while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
-                    //{
-                    //    // Translate data bytes to a ASCII string.
-                    //    data = System.Text.Encoding.ASCII.GetString(bytes, 0, i);
-                    //    Console.WriteLine("Received: {0}", data);
-
-                    //    // Process the data sent by the client.
-                    //    data = data.ToUpper();
-
-                    //    //byte[] msg = System.Text.Encoding.ASCII.GetBytes(data);
-                    //}
-                    var responseString = "<HTML><BODY> Hello world!</BODY></HTML>";
+                    var responseString = Environment.GetEnvironmentVariable("RESPONSE"); ;
                     // Send back a response.
                     var responseBytes = System.Text.Encoding.ASCII.GetBytes(responseString);
                     stream.Write(responseBytes, 0, responseBytes.Length);
@@ -203,7 +193,6 @@ namespace NortagesTwitchBot
 
             }
             server.Stop();
-            // You must close the output stream.
         }
 
         void CheckStreamerOnlineStatus()
