@@ -113,7 +113,7 @@ namespace NortagesTwitchBot
                 prefix2 = $"https://127.0.0.1:{port}/";
             }
 
-            var useHttpListener = true;
+            var useHttpListener = false;
             HttpListener listener = null;
             TcpListener server = null;
             if (useHttpListener)
