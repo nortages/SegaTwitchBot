@@ -17,6 +17,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -96,24 +97,15 @@ namespace NortagesTwitchBot
             // URI prefixes are required
             string prefix1, prefix2, host;
             int port;
-            if (Environment.GetEnvironmentVariable("DEPLOYED") != null)
-            {
-                port = int.Parse(Environment.GetEnvironmentVariable("PORT"));
-                Console.WriteLine("Port: " + port);
-                //host = "nortages-twitch-bot.herokuapp.com";
-                host = Environment.GetEnvironmentVariable("HOST");
-                //prefix = $"https://nortages-twitch-bot.herokuapp.com:{port}/";
-                prefix1 = $"http://{host}:{port}/";
-                prefix2 = $"https://{host}:{port}/";
-            }
-            else
-            {
-                port = 5000;
-                host = "localhost";
-                prefix1 = $"http://127.0.0.1:{port}/";
-                prefix2 = $"https://127.0.0.1:{port}/";
-            }
-            var useHttpListener = Environment.GetEnvironmentVariable("UseHttpListener") == "true";
+            port = int.Parse(Environment.GetEnvironmentVariable("PORT") ?? "5000");
+            Console.WriteLine("Port: " + port);
+            //host = "nortages-twitch-bot.herokuapp.com";
+            host = Environment.GetEnvironmentVariable("HOST") ?? "127.0.0.1";
+            //prefix = $"https://nortages-twitch-bot.herokuapp.com:{port}/";
+            prefix1 = $"http://{host}:{port}/";
+            prefix2 = $"https://{host}:{port}/";
+
+            var useHttpListener = (Environment.GetEnvironmentVariable("UseHttpListener") ?? "true") == "true";
             HttpListener listener = null;
             TcpListener server = null;
             if (useHttpListener)
@@ -122,7 +114,8 @@ namespace NortagesTwitchBot
                 listener = new HttpListener();
                 // Add the prefix.
                 listener.Prefixes.Add(prefix1);
-                listener.Prefixes.Add(prefix2);
+                var useHttps = Environment.GetEnvironmentVariable("USE-HTTPS") != null;
+                if (useHttps) listener.Prefixes.Add(prefix2);
                 listener.Start();
             }
             else
@@ -159,7 +152,7 @@ namespace NortagesTwitchBot
                     if (request.HttpMethod != "OPTIONS")
                     {
                         Console.WriteLine("A new HTTP request from HttpListener!");
-                        responseString = Environment.GetEnvironmentVariable("RESPONSE");
+                        responseString = Environment.GetEnvironmentVariable("RESPONSE") ?? "Hello world";
                     }
                     else
                     {
@@ -178,16 +171,37 @@ namespace NortagesTwitchBot
                     //var client = server.AcceptTcpClient();
                     var client = server.AcceptSocket();
                     Console.WriteLine("A new HTTP request from TcpListener!");
+                    Console.WriteLine("Client connected: {0}\r\n", client.RemoteEndPoint);
 
-                    data = null;
                     int i;
                     // Get a stream object for reading and writing
                     //var stream = client.GetStream();
-                    var responseString = Environment.GetEnvironmentVariable("RESPONSE"); ;
+                    var responseString = Environment.GetEnvironmentVariable("RESPONSE") ?? "Hello world";
                     // Send back a response.
                     var responseBytes = System.Text.Encoding.ASCII.GetBytes(responseString);
                     //stream.Write(responseBytes, 0, responseBytes.Length);
-                    client.Send(responseBytes);
+                    string content = "Goodbye World!";
+
+                    //var writer = new StreamWriter(client.GetStream());
+                    client.Send(Encoding.UTF8.GetBytes("HTTP/1.0 200 OK"));
+                    client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
+                    client.Send(Encoding.UTF8.GetBytes("Content-Type: text/plain; charset=UTF-8"));
+                    client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
+                    client.Send(Encoding.UTF8.GetBytes("Content-Length: " + content.Length));
+                    client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
+                    client.Send(Encoding.UTF8.GetBytes("Access-Control-Allow-Origin: https://www.twitch.tv"));
+                    client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
+                    client.Send(Encoding.UTF8.GetBytes("Access-Control-Allow-Credentials: true"));
+                    client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
+                    client.Send(Encoding.UTF8.GetBytes("Access-Control-Allow-Methods: GET"));
+                    client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
+                    client.Send(Encoding.UTF8.GetBytes("Access-Control-Allow-Headers: Access-Control-Allow-Origin"));
+                    client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
+                    client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
+                    client.Send(Encoding.UTF8.GetBytes(content));
+                    //writer.Flush();
+
+                    //client.Send(responseBytes);
                     //stream.Close();
                     client.Close();
                     Console.WriteLine("Sent: {0}", responseString);
