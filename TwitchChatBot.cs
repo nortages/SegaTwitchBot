@@ -170,24 +170,22 @@ namespace NortagesTwitchBot
                 {
                     //var client = server.AcceptTcpClient();
                     var client = server.AcceptSocket();
+                    client.LingerState = new LingerOption(true, 10);
                     Console.WriteLine("A new HTTP request from TcpListener!");
                     Console.WriteLine("Client connected: {0}\r\n", client.RemoteEndPoint);
 
                     int i;
                     // Get a stream object for reading and writing
                     //var stream = client.GetStream();
-                    var responseString = Environment.GetEnvironmentVariable("RESPONSE") ?? "Hello world";
-                    // Send back a response.
-                    var responseBytes = System.Text.Encoding.ASCII.GetBytes(responseString);
-                    //stream.Write(responseBytes, 0, responseBytes.Length);
-                    string content = "Goodbye World!";
-
                     //var writer = new StreamWriter(client.GetStream());
+                    var responseString = Environment.GetEnvironmentVariable("RESPONSE") ?? "Hello world";
+
+                    // Send back a response.
                     client.Send(Encoding.UTF8.GetBytes("HTTP/1.0 200 OK"));
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
                     client.Send(Encoding.UTF8.GetBytes("Content-Type: text/plain; charset=UTF-8"));
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
-                    client.Send(Encoding.UTF8.GetBytes("Content-Length: " + content.Length));
+                    client.Send(Encoding.UTF8.GetBytes("Content-Length: " + responseString.Length));
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
                     client.Send(Encoding.UTF8.GetBytes("Access-Control-Allow-Origin: https://www.twitch.tv"));
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
@@ -198,9 +196,9 @@ namespace NortagesTwitchBot
                     client.Send(Encoding.UTF8.GetBytes("Access-Control-Allow-Headers: Access-Control-Allow-Origin"));
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
-                    client.Send(Encoding.UTF8.GetBytes(content));
-                    //writer.Flush();
+                    client.Send(Encoding.UTF8.GetBytes(responseString));
 
+                    //writer.Flush();
                     //client.Send(responseBytes);
                     //stream.Close();
                     client.Close();
