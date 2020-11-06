@@ -173,7 +173,7 @@ namespace NortagesTwitchBot
                     client.LingerState = new LingerOption(true, 10);
                     client.Ttl = 10;
                     Console.WriteLine("A new HTTP request from TcpListener!");
-                    Console.WriteLine("Client connected: {0}\r\n", client.RemoteEndPoint);
+                    Console.WriteLine("Client connected: {0}", client.RemoteEndPoint);
 
                     byte[] buffer = new byte[1024];
                     int receivelength = client.Receive(buffer, 1024, SocketFlags.None);
@@ -206,7 +206,7 @@ namespace NortagesTwitchBot
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
                     client.Send(Encoding.UTF8.GetBytes("Access-Control-Allow-Methods: GET"));
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
-                    client.Send(Encoding.UTF8.GetBytes("Access-Control-Allow-Headers: Access-Control-Allow-Origin"));
+                    client.Send(Encoding.UTF8.GetBytes("Access-Control-Allow-Headers: Access-Control-Allow-Origin, segatron, SEGATRON"));
                     Console.WriteLine("All headers were sent");
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
                     client.Send(Encoding.UTF8.GetBytes(Environment.NewLine));
