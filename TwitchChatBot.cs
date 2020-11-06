@@ -184,8 +184,8 @@ namespace NortagesTwitchBot
                     }
                     else
                     {
-                        Console.WriteLine("Request: " + requeststring);
                     }
+                    Console.WriteLine("Request: " + requeststring);
 
                     // Get a stream object for reading and writing
                     //var stream = client.GetStream();
