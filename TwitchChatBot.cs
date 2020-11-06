@@ -178,14 +178,11 @@ namespace NortagesTwitchBot
                     byte[] buffer = new byte[1024];
                     int receivelength = client.Receive(buffer, 1024, SocketFlags.None);
                     string requeststring = Encoding.UTF8.GetString(buffer, 0, receivelength);
+                    Console.WriteLine("Request: " + requeststring);
                     if (!requeststring.Contains(Environment.GetEnvironmentVariable("SECRET")))
                     {
                         continue;
                     }
-                    else
-                    {
-                    }
-                    Console.WriteLine("Request: " + requeststring);
 
                     // Get a stream object for reading and writing
                     //var stream = client.GetStream();
