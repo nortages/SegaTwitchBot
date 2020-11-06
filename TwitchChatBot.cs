@@ -197,6 +197,7 @@ namespace NortagesTwitchBot
                     var responseBytes = System.Text.Encoding.ASCII.GetBytes(responseString);
                     stream.Write(responseBytes, 0, responseBytes.Length);
                     stream.Close();
+                    client.Close();
                     Console.WriteLine("Sent: {0}", responseString);
                 }
 
